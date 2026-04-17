@@ -1,0 +1,3252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CBC LinkedIn Outreach Dashboard</title>
+<style>
+  :root {
+    --navy: #004182;
+    --blue: #0a66c2;
+    --light-blue: #eff6ff;
+    --border: #bfdbfe;
+    --white: #ffffff;
+    --gray: #f1f5f9;
+    --text: #1a1a2e;
+    --muted: #64748b;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --orange: #d97706;
+    --orange-light: #fef3c7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f4f8; color: var(--text); min-height: 100vh; }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--navy);
+    color: #fff;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
+  .topbar-brand { display: flex; align-items: center; gap: 10px; }
+  .topbar-brand svg { width: 28px; height: 28px; }
+  .topbar-brand span { font-size: 16pt; font-weight: bold; letter-spacing: .5px; }
+  .topbar-sub { font-size: 9pt; color: #93c5fd; margin-top: 1px; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .badge { background: #0a66c2; color: #fff; border-radius: 12px; padding: 3px 12px; font-size: 9pt; font-weight: bold; }
+  .badge.green { background: var(--green); }
+
+  /* ── LAYOUT ── */
+  .layout { display: flex; gap: 0; min-height: calc(100vh - 56px); }
+
+  /* ── SIDEBAR (CONFIG) ── */
+  .sidebar {
+    width: 280px; min-width: 240px; background: #fff;
+    border-right: 2px solid var(--border);
+    padding: 0;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .sidebar-header {
+    background: var(--navy); color: #fff;
+    padding: 14px 18px; font-size: 10pt; font-weight: bold;
+    letter-spacing: 1px; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .config-section { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .config-section label.section-label {
+    font-size: 8.5pt; font-weight: bold; color: var(--navy);
+    text-transform: uppercase; letter-spacing: .8px;
+    display: block; margin-bottom: 8px;
+  }
+  .check-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer; }
+  .check-item input[type=checkbox] { accent-color: var(--blue); width: 14px; height: 14px; cursor: pointer; }
+  .check-item span { font-size: 9.5pt; color: var(--text); }
+
+  /* ── TAG INPUT SYSTEM ── */
+  .tag-input-wrap {
+    border: 1.5px solid var(--border); border-radius: 6px;
+    background: #fff; padding: 6px 8px;
+    min-height: 40px; cursor: text;
+    transition: border-color .2s;
+  }
+  .tag-input-wrap:focus-within { border-color: var(--blue); }
+  .tag-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+  .tag-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--light-blue); color: var(--blue);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 3px 10px; font-size: 8.5pt; font-weight: 600;
+    cursor: default; transition: all .15s;
+  }
+  .tag-chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .tag-chip.custom { background: #f3e8ff; color: #7c3aed; border-color: #d8b4fe; }
+  .tag-chip.custom.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+  .tag-chip-remove {
+    background: none; border: none; cursor: pointer;
+    color: inherit; opacity: .7; font-size: 11pt; line-height: 1;
+    padding: 0 0 0 2px; display: flex; align-items: center;
+  }
+  .tag-chip-remove:hover { opacity: 1; }
+  .tag-text-row { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+  .tag-text-input {
+    flex: 1; border: none; outline: none;
+    font-size: 9pt; color: var(--text); background: transparent;
+    padding: 2px 4px;
+  }
+  .tag-text-input::placeholder { color: #94a3b8; }
+  .tag-add-btn {
+    background: var(--blue); color: #fff; border: none;
+    border-radius: 4px; padding: 3px 10px; font-size: 8.5pt;
+    font-weight: bold; cursor: pointer; white-space: nowrap;
+    transition: background .15s;
+  }
+  .tag-add-btn:hover { background: var(--navy); }
+  .tag-preset-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+  .tag-preset-btn {
+    background: var(--gray); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 2px 9px; font-size: 8pt; cursor: pointer;
+    transition: all .15s;
+  }
+  .tag-preset-btn:hover { background: var(--light-blue); color: var(--blue); border-color: var(--blue); }
+  .tag-hint { font-size: 7.5pt; color: var(--muted); font-style: italic; margin-top: 4px; }
+  .select-field, .input-field {
+    width: 100%; padding: 6px 10px; border: 1px solid var(--border);
+    border-radius: 4px; font-size: 9.5pt; color: var(--text);
+    background: #fff; outline: none;
+  }
+  .select-field:focus, .input-field:focus { border-color: var(--blue); }
+  .apply-btn {
+    width: 100%; margin-top: 4px; padding: 9px;
+    background: var(--blue); color: #fff; border: none;
+    border-radius: 4px; font-size: 10pt; font-weight: bold;
+    cursor: pointer; transition: background .2s;
+  }
+  .apply-btn:hover { background: var(--navy); }
+  .reset-btn {
+    width: 100%; margin-top: 6px; padding: 7px;
+    background: #fff; color: var(--blue); border: 1.5px solid var(--blue);
+    border-radius: 4px; font-size: 9.5pt; font-weight: bold;
+    cursor: pointer; transition: all .2s;
+  }
+  .reset-btn:hover { background: var(--light-blue); }
+
+  /* ── MAIN CONTENT ── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    background: #fff; border-bottom: 1.5px solid var(--border);
+    padding: 10px 22px; display: flex; align-items: center;
+    gap: 14px; flex-wrap: wrap;
+  }
+  .search-box {
+    display: flex; align-items: center; border: 1.5px solid var(--border);
+    border-radius: 20px; padding: 5px 14px; gap: 8px; background: var(--gray);
+    flex: 1; min-width: 180px;
+  }
+  .search-box input { border: none; background: transparent; outline: none; font-size: 9.5pt; width: 100%; }
+  .sort-select {
+    padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 4px;
+    font-size: 9.5pt; background: #fff; outline: none; cursor: pointer;
+  }
+  .select-all-btn, .clear-btn, .compose-btn, .export-btn {
+    padding: 7px 16px; border-radius: 4px; font-size: 9pt; font-weight: bold;
+    cursor: pointer; border: none; transition: all .2s;
+  }
+  .select-all-btn { background: var(--light-blue); color: var(--blue); border: 1.5px solid var(--border); }
+  .select-all-btn:hover { background: var(--blue); color: #fff; }
+  .clear-btn { background: #fff; color: var(--muted); border: 1.5px solid var(--border); }
+  .clear-btn:hover { background: var(--gray); }
+  .compose-btn { background: var(--blue); color: #fff; }
+  .compose-btn:hover { background: var(--navy); }
+  .compose-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  .export-btn { background: var(--green-light); color: var(--green); border: 1.5px solid #bbf7d0; }
+  .export-btn:hover { background: var(--green); color: #fff; }
+  .add-exec-btn { background: #fef9c3; color: #854d0e; border: 1.5px solid #fde68a; padding: 7px 16px; border-radius: 4px; font-size: 9pt; font-weight: bold; cursor: pointer; transition: all .2s; }
+  .add-exec-btn:hover { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+  .stats-bar { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+  .stat-chip {
+    background: var(--light-blue); color: var(--blue);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 3px 10px; font-size: 8.5pt; font-weight: bold;
+  }
+  .stat-chip.selected { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+  /* ── EXECUTIVE GRID ── */
+  .content-area { padding: 18px 22px; overflow-y: auto; flex: 1; }
+  .exec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  /* ── EXECUTIVE CARD ── */
+  .exec-card {
+    background: #fff; border: 2px solid var(--border);
+    border-radius: 8px; padding: 16px;
+    transition: box-shadow .2s, border-color .2s;
+    position: relative; cursor: pointer;
+  }
+  .exec-card:hover { box-shadow: 0 4px 16px rgba(10,102,194,.12); border-color: var(--blue); }
+  .exec-card.selected { border-color: var(--blue); background: #f0f7ff; box-shadow: 0 0 0 3px rgba(10,102,194,.18); }
+  .exec-card.sent { border-color: var(--green); background: var(--green-light); opacity: .75; }
+
+  .card-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--navy));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 15pt; font-weight: bold; flex-shrink: 0;
+    border: 2px solid var(--border);
+  }
+  .card-info { flex: 1; }
+  .card-name { font-size: 11pt; font-weight: bold; color: var(--navy); margin-bottom: 2px; }
+  .card-title { font-size: 9pt; color: var(--blue); margin-bottom: 2px; font-weight: 600; }
+  .card-company { font-size: 9pt; color: var(--text); margin-bottom: 2px; }
+  .card-location { font-size: 8.5pt; color: var(--muted); }
+  .card-checkbox {
+    width: 20px; height: 20px; accent-color: var(--blue);
+    cursor: pointer; flex-shrink: 0; margin-top: 2px;
+  }
+
+  .card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
+  .tag {
+    font-size: 7.5pt; padding: 2px 8px; border-radius: 10px;
+    font-weight: bold; letter-spacing: .3px;
+  }
+  .tag.industry { background: #dbeafe; color: #1e40af; }
+  .tag.size { background: #f3e8ff; color: #7c3aed; }
+  .tag.geo { background: #fef9c3; color: #854d0e; }
+  .tag.role { background: #dcfce7; color: #15803d; }
+
+  .card-actions { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .btn-view, .btn-msg, .btn-send {
+    flex: 1; padding: 6px 8px; border-radius: 4px; font-size: 8.5pt;
+    font-weight: bold; cursor: pointer; border: none; text-align: center;
+    transition: all .2s;
+  }
+  .btn-view { background: var(--gray); color: var(--navy); border: 1px solid var(--border); }
+  .btn-view:hover { background: var(--light-blue); }
+  .btn-msg { background: var(--light-blue); color: var(--blue); border: 1px solid var(--border); }
+  .btn-msg:hover { background: var(--blue); color: #fff; }
+  .btn-send { background: var(--blue); color: #fff; }
+  .btn-send:hover { background: var(--navy); }
+  .btn-send.sent { background: var(--green); cursor: default; }
+
+  .sent-badge {
+    display: none; position: absolute; top: 10px; right: 10px;
+    background: var(--green); color: #fff; font-size: 7.5pt; font-weight: bold;
+    padding: 2px 8px; border-radius: 10px; letter-spacing: .5px;
+  }
+  .exec-card.sent .sent-badge { display: block; }
+
+  /* ── MESSAGE MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.45); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 10px; width: 620px; max-width: 95vw;
+    max-height: 90vh; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    display: flex; flex-direction: column;
+  }
+  .modal-header {
+    background: var(--navy); color: #fff;
+    padding: 16px 22px; border-radius: 10px 10px 0 0;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .modal-header h3 { font-size: 12pt; }
+  .modal-close { background: none; border: none; color: #fff; font-size: 18pt; cursor: pointer; line-height: 1; }
+  .modal-body { padding: 22px; overflow-y: auto; flex: 1; }
+  .modal-exec-info { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--light-blue); border-radius: 6px; margin-bottom: 16px; }
+  .modal-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--navy)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14pt; font-weight: bold; flex-shrink: 0; }
+  .modal-name { font-weight: bold; font-size: 11pt; color: var(--navy); }
+  .modal-role { font-size: 9pt; color: var(--blue); }
+
+  .msg-type-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .msg-tab {
+    padding: 6px 14px; border-radius: 16px; font-size: 8.5pt; font-weight: bold;
+    cursor: pointer; border: 1.5px solid var(--border); background: #fff; color: var(--muted);
+    transition: all .15s;
+  }
+  .msg-tab.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+  .msg-label { font-size: 8.5pt; font-weight: bold; color: var(--navy); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .char-counter { float: right; font-size: 8pt; color: var(--muted); }
+  .char-counter.over { color: var(--red); font-weight: bold; }
+  textarea.msg-textarea {
+    width: 100%; min-height: 140px; padding: 10px 14px;
+    border: 1.5px solid var(--border); border-radius: 6px;
+    font-size: 10pt; color: var(--text); resize: vertical; outline: none;
+    line-height: 1.55;
+  }
+  textarea.msg-textarea:focus { border-color: var(--blue); }
+  .msg-hint { font-size: 8.5pt; color: var(--muted); font-style: italic; margin-top: 5px; }
+
+  .modal-actions {
+    display: flex; gap: 10px;
+    padding: 14px 22px; margin: 0;
+    border-top: 1.5px solid var(--border);
+    background: #fff;
+    flex-shrink: 0;
+    border-radius: 0 0 10px 10px;
+  }
+  .modal-body .modal-actions {
+    /* inline actions inside body (e.g. campaign create form) */
+    border: none; padding: 14px 0 0; background: transparent;
+  }
+  .modal-btn { flex: 1; padding: 10px; border-radius: 5px; font-size: 10pt; font-weight: bold; cursor: pointer; border: none; transition: all .2s; }
+  .modal-btn.cancel { background: var(--gray); color: var(--muted); }
+  .modal-btn.cancel:hover { background: var(--border); }
+  .modal-btn.copy { background: var(--light-blue); color: var(--blue); }
+  .modal-btn.copy:hover { background: var(--blue); color: #fff; }
+  .modal-btn.send { background: var(--blue); color: #fff; }
+  .modal-btn.send:hover { background: var(--navy); }
+
+  /* ── BULK MODAL ── */
+  .bulk-modal { width: 700px; }
+  .bulk-list { max-height: 260px; overflow-y: auto; margin-bottom: 14px; border: 1px solid var(--border); border-radius: 6px; }
+  .bulk-item { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+  .bulk-item:last-child { border-bottom: none; }
+  .bulk-item-name { font-weight: bold; font-size: 9.5pt; flex: 1; }
+  .bulk-item-role { font-size: 8.5pt; color: var(--blue); }
+  .bulk-status { font-size: 8pt; font-weight: bold; padding: 2px 8px; border-radius: 10px; }
+  .bulk-status.queued { background: var(--orange-light); color: var(--orange); }
+  .bulk-status.sent { background: var(--green-light); color: var(--green); }
+
+  /* ── BULK SEND MODAL ── */
+  .bulk-send-modal { width: 720px; }
+  .bulk-send-summary {
+    display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .bs-stat {
+    flex: 1; min-width: 120px; background: var(--light-blue);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 14px; text-align: center;
+  }
+  .bs-stat-num { font-size: 20pt; font-weight: bold; color: var(--navy); line-height: 1; }
+  .bs-stat-label { font-size: 8pt; color: var(--muted); margin-top: 3px; }
+  .bs-exec-list {
+    max-height: 220px; overflow-y: auto;
+    border: 1px solid var(--border); border-radius: 6px; margin-bottom: 14px;
+  }
+  .bs-exec-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 9pt;
+  }
+  .bs-exec-row:last-child { border-bottom: none; }
+  .bs-exec-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--blue); color: #fff; font-size: 8pt;
+    font-weight: bold; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bs-exec-info { flex: 1; }
+  .bs-exec-name { font-weight: bold; color: var(--navy); }
+  .bs-exec-meta { font-size: 8.5pt; color: var(--muted); }
+  .bs-exec-msg  { font-size: 8pt; color: var(--text); font-style: italic; margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px; }
+  .bs-limit-warn {
+    background: var(--orange-light); border: 1.5px solid #fde68a;
+    border-radius: 6px; padding: 9px 14px; margin-bottom: 14px;
+    font-size: 9pt; color: #92400e; display: flex; align-items: center; gap: 8px;
+  }
+  .bs-limit-warn.hide { display: none; }
+  .btn-send-all {
+    flex: 2; padding: 11px; border-radius: 5px;
+    font-size: 11pt; font-weight: bold; cursor: pointer; border: none;
+    background: var(--blue); color: #fff; transition: background .2s;
+  }
+  .btn-send-all:hover { background: var(--navy); }
+  .btn-send-all-manual {
+    flex: 2; padding: 11px; border-radius: 5px;
+    font-size: 11pt; font-weight: bold; cursor: pointer; border: none;
+    background: #f59e0b; color: #fff; transition: background .2s;
+  }
+  .btn-send-all-manual:hover { background: #d97706; }
+  /* Send All button in queue panel */
+  .send-all-queue-btn {
+    background: var(--blue); color: #fff; border: none;
+    padding: 7px 18px; border-radius: 4px; font-size: 9.5pt;
+    font-weight: bold; cursor: pointer; transition: background .2s;
+  }
+  .send-all-queue-btn:hover { background: var(--navy); }
+  /* Automation guide steps */
+  .auto-steps { display:flex; flex-direction:column; gap:10px; margin: 14px 0; }
+  .auto-step {
+    display:flex; align-items:flex-start; gap:12px;
+    padding:10px 14px; border-radius:6px; background:#f8fafc;
+    border:1.5px solid var(--border);
+  }
+  .auto-step-num {
+    width:26px; height:26px; border-radius:50%; background:var(--blue);
+    color:#fff; font-size:10pt; font-weight:bold; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .auto-step-text { font-size:9pt; color:var(--text); line-height:1.5; flex:1; }
+  .auto-step-text strong { color:var(--navy); }
+  .auto-step.done { background:var(--green-light); border-color:#86efac; }
+  .auto-step.done .auto-step-num { background:var(--green); }
+  .btn-export-queue {
+    flex:2; padding:11px; border-radius:5px; font-size:11pt;
+    font-weight:bold; cursor:pointer; border:none;
+    background:#16a34a; color:#fff; transition:background .2s;
+  }
+  .btn-export-queue:hover { background:#15803d; }
+
+  /* Select All & Send toolbar button */
+  .bulk-send-btn {
+    padding: 7px 16px; border-radius: 4px; font-size: 9pt; font-weight: bold;
+    cursor: pointer; border: none; transition: all .2s;
+    background: var(--blue); color: #fff;
+  }
+  .bulk-send-btn:hover { background: var(--navy); }
+
+  /* ── SEND QUEUE PANEL ── */
+  .queue-panel {
+    background: #fff; border-top: 2px solid var(--blue);
+    padding: 0; max-height: 0; overflow: hidden;
+    transition: max-height .35s ease, padding .35s ease;
+  }
+  .queue-panel.open { max-height: 420px; padding: 16px 22px; overflow-y: auto; }
+  .queue-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .queue-header h4 { font-size: 10.5pt; font-weight: bold; color: var(--navy); }
+  .queue-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  .queue-table th { background: var(--navy); color: #fff; padding: 7px 12px; text-align: left; }
+  .queue-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .queue-table tr:hover td { background: var(--light-blue); }
+  .queue-msg-preview { color: var(--muted); font-style: italic; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .queue-remove { color: var(--red); cursor: pointer; font-size: 10pt; border: none; background: none; }
+  .queue-status { font-size: 8pt; font-weight: bold; padding: 2px 8px; border-radius: 10px; }
+  .queue-status.pending  { background: var(--orange-light); color: var(--orange); }
+  .queue-status.sending  { background: #dbeafe; color: #1d4ed8; }
+  .queue-status.done     { background: var(--green-light); color: var(--green); }
+  .queue-status.failed   { background: var(--red-light); color: var(--red); }
+  .copy-queue-btn {
+    background: var(--navy); color: #fff; border: none;
+    padding: 7px 18px; border-radius: 4px; font-size: 9pt;
+    font-weight: bold; cursor: pointer; transition: background .2s;
+  }
+  .copy-queue-btn:hover { background: var(--blue); }
+  .clear-queue-btn {
+    background: var(--red-light); color: var(--red); border: 1px solid #fca5a5;
+    padding: 7px 14px; border-radius: 4px; font-size: 9pt;
+    font-weight: bold; cursor: pointer; margin-left: 8px;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { text-align: center; padding: 60px 30px; color: var(--muted); }
+  .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: .3; }
+  .empty-state p { font-size: 12pt; margin-bottom: 8px; }
+  .empty-state small { font-size: 9.5pt; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 999;
+    background: var(--navy); color: #fff;
+    padding: 12px 22px; border-radius: 8px; font-size: 10pt; font-weight: bold;
+    box-shadow: 0 4px 20px rgba(0,0,0,.3);
+    transform: translateY(80px); opacity: 0; transition: all .35s;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.green { background: var(--green); }
+
+  /* ── SAVED SEARCHES ── */
+  .saved-search-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 8px 10px; border: 1.5px solid var(--border);
+    border-radius: 6px; background: #fff; margin-bottom: 6px;
+    transition: border-color .15s;
+  }
+  .saved-search-item:hover { border-color: var(--blue); }
+  .saved-search-name { font-size: 9pt; font-weight: bold; color: var(--navy); margin-bottom: 2px; }
+  .saved-search-meta { font-size: 7.5pt; color: var(--muted); line-height: 1.4; }
+  .saved-search-actions { display: flex; gap: 4px; margin-top: 5px; }
+  .run-search-btn {
+    flex: 1; padding: 4px 8px; background: var(--blue); color: #fff;
+    border: none; border-radius: 4px; font-size: 8pt; font-weight: bold;
+    cursor: pointer; transition: background .15s;
+  }
+  .run-search-btn:hover { background: var(--navy); }
+  .del-search-btn {
+    padding: 4px 8px; background: var(--red-light); color: var(--red);
+    border: 1px solid #fca5a5; border-radius: 4px; font-size: 8pt;
+    cursor: pointer; transition: all .15s;
+  }
+  .del-search-btn:hover { background: var(--red); color: #fff; }
+  .save-search-btn {
+    width: 100%; padding: 7px; background: #f0fdf4; color: #15803d;
+    border: 1.5px solid #bbf7d0; border-radius: 4px; font-size: 9pt;
+    font-weight: bold; cursor: pointer; transition: all .2s; margin-bottom: 6px;
+  }
+  .save-search-btn:hover { background: var(--green); color: #fff; border-color: var(--green); }
+  .search-empty { font-size: 8.5pt; color: var(--muted); font-style: italic; padding: 4px 2px; }
+  .saved-search-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    font-size: 7pt; font-weight: bold; background: var(--light-blue);
+    color: var(--blue); margin-right: 3px; margin-top: 2px;
+  }
+  /* Save modal input */
+  .save-modal { width: 420px; }
+
+  /* ── MODE TOGGLE ── */
+  .mode-toggle-wrap { display:flex; align-items:center; gap:8px; }
+  .mode-toggle-label { font-size:8.5pt; color:#93c5fd; white-space:nowrap; }
+  .mode-toggle { display:flex; background:rgba(255,255,255,.12); border-radius:20px; padding:3px; gap:2px; }
+  .mode-btn {
+    padding:5px 14px; border-radius:16px; font-size:8.5pt; font-weight:bold;
+    border:none; cursor:pointer; transition:all .2s; white-space:nowrap;
+    background:transparent; color:rgba(255,255,255,.7);
+  }
+  .mode-btn.active { background:#fff; color:var(--navy); }
+  .mode-btn:not(.active):hover { background:rgba(255,255,255,.2); color:#fff; }
+  .topbar-api-btn {
+    background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.3);
+    border-radius:4px; padding:4px 12px; font-size:8.5pt; cursor:pointer; transition:all .2s;
+  }
+  .topbar-api-btn:hover { background:rgba(255,255,255,.3); }
+
+  /* ── MODE BANNERS ── */
+  .mode-banner {
+    padding:7px 22px; font-size:8.5pt; font-weight:bold;
+    display:flex; align-items:center; gap:10px; display:none;
+  }
+  .mode-banner.claude-banner { background:#eff6ff; color:#1d4ed8; border-bottom:1.5px solid #bfdbfe; }
+  .mode-banner.manual-banner { background:#fef9c3; color:#854d0e; border-bottom:1.5px solid #fde68a; }
+  .mode-banner.show { display:flex; }
+
+  /* ── AI PROVIDER CONFIG (Manual Mode sidebar section) ── */
+  .ai-provider-section { display:none; }
+  .ai-provider-section.show { display:block; }
+  .provider-tabs { display:flex; gap:4px; margin-bottom:10px; }
+  .provider-tab {
+    flex:1; padding:5px 4px; border-radius:4px; font-size:7.5pt; font-weight:bold;
+    border:1.5px solid var(--border); background:#fff; color:var(--muted); cursor:pointer;
+    text-align:center; transition:all .15s;
+  }
+  .provider-tab.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+  .provider-pane { display:none; }
+  .provider-pane.show { display:block; }
+  .api-key-row { display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+  .api-key-input { flex:1; padding:5px 8px; border:1px solid var(--border); border-radius:4px; font-size:8.5pt; font-family:monospace; }
+  .test-api-btn { background:var(--green-light); color:var(--green); border:1px solid #bbf7d0; border-radius:4px; padding:5px 8px; font-size:8pt; font-weight:bold; cursor:pointer; white-space:nowrap; }
+  .test-api-btn:hover { background:var(--green); color:#fff; }
+  .api-status { font-size:8pt; margin-top:4px; }
+  .api-status.ok   { color:var(--green); }
+  .api-status.fail { color:var(--red); }
+
+  /* ── MANUAL GUIDE MODAL ── */
+  .guide-modal { width:560px; }
+  .guide-steps { display:flex; flex-direction:column; gap:0; }
+  .guide-step {
+    display:flex; gap:14px; align-items:flex-start;
+    padding:12px 0; border-bottom:1px solid var(--border);
+  }
+  .guide-step:last-child { border-bottom:none; }
+  .step-num {
+    width:28px; height:28px; border-radius:50%; background:var(--blue);
+    color:#fff; font-size:11pt; font-weight:bold; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .step-num.done { background:var(--green); }
+  .step-content { flex:1; }
+  .step-title { font-size:10pt; font-weight:bold; color:var(--navy); margin-bottom:3px; }
+  .step-desc { font-size:9pt; color:var(--muted); line-height:1.5; }
+  .step-action { margin-top:6px; }
+  .guide-msg-box {
+    background:var(--gray); border:1px solid var(--border); border-radius:6px;
+    padding:10px 12px; font-size:9.5pt; color:var(--text); line-height:1.6;
+    margin:8px 0; white-space:pre-wrap; word-break:break-word;
+  }
+
+  /* ── LIMITS BAR ── */
+  .limits-bar {
+    background: #fff; border-bottom: 2px solid var(--border);
+    padding: 8px 22px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  }
+  .limits-bar-title { font-size: 8pt; font-weight: bold; color: var(--navy); text-transform: uppercase; letter-spacing: .8px; white-space: nowrap; }
+  .limit-meter { display: flex; align-items: center; gap: 7px; }
+  .limit-label { font-size: 8pt; color: var(--muted); white-space: nowrap; }
+  .limit-track { width: 80px; height: 7px; background: var(--gray); border-radius: 10px; overflow: hidden; }
+  .limit-fill { height: 100%; border-radius: 10px; transition: width .4s; }
+  .limit-fill.safe    { background: var(--green); }
+  .limit-fill.warn    { background: var(--orange); }
+  .limit-fill.danger  { background: var(--red); }
+  .limit-count { font-size: 8pt; font-weight: bold; color: var(--text); white-space: nowrap; min-width: 50px; }
+  .limit-count.warn   { color: var(--orange); }
+  .limit-count.danger { color: var(--red); }
+  .limits-reset-btn {
+    margin-left: auto; background: none; border: 1px solid var(--border);
+    color: var(--muted); border-radius: 4px; padding: 3px 10px;
+    font-size: 8pt; cursor: pointer; white-space: nowrap;
+  }
+  .limits-reset-btn:hover { color: var(--red); border-color: var(--red); }
+  .withdraw-btn {
+    background: var(--orange-light); color: var(--orange);
+    border: 1.5px solid #fde68a; padding: 3px 12px; border-radius: 4px;
+    font-size: 8pt; font-weight: bold; cursor: pointer; white-space: nowrap;
+    transition: all .2s;
+  }
+  .withdraw-btn:hover { background: var(--orange); color: #fff; }
+
+  /* ── CAMPAIGN SYSTEM ── */
+  .campaign-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 7.5pt; font-weight: bold;
+  }
+  .campaign-modal { width: 680px; }
+  .campaign-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .campaign-row {
+    display: flex; align-items: center; gap: 10px;
+    border: 1.5px solid var(--border); border-radius: 6px; padding: 10px 14px;
+    background: var(--light-blue); cursor: pointer; transition: all .15s;
+  }
+  .campaign-row:hover { border-color: var(--blue); }
+  .campaign-row.active { border-color: var(--blue); background: #dbeafe; }
+  .campaign-icon { font-size: 16pt; }
+  .campaign-name { font-weight: bold; font-size: 10pt; color: var(--navy); flex: 1; }
+  .campaign-meta { font-size: 8.5pt; color: var(--muted); }
+  .campaign-stat { font-size: 8.5pt; font-weight: bold; color: var(--blue); min-width: 70px; text-align: right; }
+  .campaign-delete { background: none; border: none; color: var(--red); cursor: pointer; font-size: 13pt; opacity: .6; }
+  .campaign-delete:hover { opacity: 1; }
+  .create-campaign-form { border: 1.5px solid var(--border); border-radius: 8px; padding: 16px; background: var(--gray); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .form-row-full { margin-bottom: 10px; }
+
+  /* ── PROFILE PANEL (right side) ── */
+  .profile-panel {
+    width: 0; min-width: 0; background: #fff; border-left: 2px solid var(--border);
+    overflow: hidden; transition: width .3s ease, min-width .3s ease;
+    flex-shrink: 0; display: flex; flex-direction: column;
+  }
+  .profile-panel.open { width: 340px; min-width: 340px; }
+  .profile-panel-header {
+    background: var(--navy); color: #fff; padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .profile-panel-header h4 { font-size: 10pt; }
+  .profile-panel-close { background: none; border: none; color: #fff; font-size: 16pt; cursor: pointer; line-height: 1; }
+  .profile-panel-body { padding: 16px; overflow-y: auto; flex: 1; }
+  .profile-avatar-lg {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--navy));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 20pt; font-weight: bold; margin: 0 auto 12px; border: 3px solid var(--border);
+  }
+  .profile-name-lg { font-size: 13pt; font-weight: bold; color: var(--navy); text-align: center; margin-bottom: 3px; }
+  .profile-title-lg { font-size: 9pt; color: var(--blue); text-align: center; margin-bottom: 3px; }
+  .profile-company-lg { font-size: 9pt; color: var(--text); text-align: center; margin-bottom: 12px; }
+  .profile-detail-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .profile-detail-row:last-child { border-bottom: none; }
+  .profile-detail-icon { font-size: 12pt; flex-shrink: 0; margin-top: 1px; }
+  .profile-detail-text { font-size: 9pt; color: var(--text); }
+  .profile-detail-label { font-size: 7.5pt; color: var(--muted); font-weight: bold; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+  .profile-actions-panel { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .panel-btn { width: 100%; padding: 9px; border-radius: 5px; font-size: 9.5pt; font-weight: bold; cursor: pointer; border: none; transition: all .2s; text-align: center; }
+  .panel-btn.primary { background: var(--blue); color: #fff; }
+  .panel-btn.primary:hover { background: var(--navy); }
+  .panel-btn.secondary { background: var(--light-blue); color: var(--blue); border: 1.5px solid var(--border); }
+  .panel-btn.secondary:hover { background: var(--blue); color: #fff; }
+  .panel-btn.linkedin { background: #0a66c2; color: #fff; }
+  .panel-btn.linkedin:hover { background: #004182; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+  /* ── MASTER MESSAGE ── */
+  .master-msg-section {
+    padding: 14px 18px; border-bottom: 2px solid #7c3aed;
+    background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%);
+  }
+  .master-msg-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .master-msg-label {
+    font-size: 8.5pt; font-weight: bold; color: #5b21b6;
+    text-transform: uppercase; letter-spacing: .8px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .master-active-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1;
+    transition: background .3s; flex-shrink: 0;
+  }
+  .master-active-dot.on { background: #16a34a; box-shadow: 0 0 5px #16a34a88; }
+  .master-msg-textarea {
+    width: 100%; min-height: 100px; padding: 9px 11px;
+    border: 1.5px solid #d8b4fe; border-radius: 6px;
+    font-size: 8.5pt; color: var(--text); resize: vertical; outline: none;
+    line-height: 1.6; font-family: Arial, sans-serif; background: #fff;
+    transition: border-color .2s;
+  }
+  .master-msg-textarea:focus { border-color: #7c3aed; }
+  .master-var-row { display: flex; flex-wrap: wrap; gap: 3px; margin: 6px 0; }
+  .master-var-chip {
+    display: inline-block; background: #ede9fe; color: #7c3aed;
+    border: 1px solid #c4b5fd; border-radius: 4px;
+    padding: 1px 6px; font-size: 7pt; font-family: monospace;
+    cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .master-var-chip:hover { background: #7c3aed; color: #fff; }
+  .master-msg-footer { display: flex; align-items: center; gap: 6px; margin-top: 7px; }
+  .master-apply-btn {
+    flex: 1; padding: 6px; background: #7c3aed; color: #fff;
+    border: none; border-radius: 4px; font-size: 8.5pt; font-weight: bold;
+    cursor: pointer; transition: background .2s;
+  }
+  .master-apply-btn:hover { background: #5b21b6; }
+  .master-clear-btn {
+    padding: 6px 10px; background: #fff; color: #7c3aed;
+    border: 1.5px solid #d8b4fe; border-radius: 4px; font-size: 8.5pt;
+    font-weight: bold; cursor: pointer; transition: all .2s;
+  }
+  .master-clear-btn:hover { background: #faf5ff; }
+  .master-msg-hint { font-size: 7.5pt; color: #7c3aed; margin-top: 5px; font-style: italic; }
+
+  /* ── CUSTOM TEMPLATE SECTION ── */
+  .custom-tpl-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #cbd5e1; border-radius: 20px; transition: .3s;
+  }
+  .toggle-slider:before {
+    content: ""; position: absolute;
+    height: 14px; width: 14px; left: 3px; bottom: 3px;
+    background: #fff; border-radius: 50%; transition: .3s;
+  }
+  .toggle-switch input:checked + .toggle-slider { background: var(--blue); }
+  .toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); }
+  .custom-tpl-body { display: none; }
+  .custom-tpl-body.show { display: block; }
+  .tpl-textarea {
+    width: 100%; min-height: 120px; padding: 8px 10px;
+    border: 1.5px solid var(--border); border-radius: 6px;
+    font-size: 8.5pt; color: var(--text); resize: vertical; outline: none;
+    line-height: 1.55; font-family: Arial, sans-serif;
+  }
+  .tpl-textarea:focus { border-color: var(--blue); }
+  .tpl-vars {
+    font-size: 7.5pt; color: var(--muted); margin: 5px 0 8px;
+    line-height: 1.6;
+  }
+  .tpl-var-chip {
+    display: inline-block; background: #f3e8ff; color: #7c3aed;
+    border: 1px solid #d8b4fe; border-radius: 4px;
+    padding: 0px 5px; font-size: 7pt; font-family: monospace;
+    margin: 1px 2px; cursor: pointer; transition: background .15s;
+  }
+  .tpl-var-chip:hover { background: #7c3aed; color: #fff; }
+  .apply-tpl-btn {
+    width: 100%; padding: 7px; background: #7c3aed; color: #fff;
+    border: none; border-radius: 4px; font-size: 9pt; font-weight: bold;
+    cursor: pointer; transition: background .2s; margin-top: 2px;
+  }
+  .apply-tpl-btn:hover { background: #5b21b6; }
+  .tpl-status { font-size: 7.5pt; color: var(--green); margin-top: 4px; font-weight: bold; min-height: 16px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <svg viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="6" fill="#0a66c2"/>
+      <text x="5" y="20" font-size="15" fill="white" font-weight="bold" font-family="Arial">in</text>
+    </svg>
+    <div>
+      <span>CBC LinkedIn Outreach Dashboard</span>
+      <div class="topbar-sub" id="topbarSub">🤖 Claude Mode — Automated &nbsp;|&nbsp; cbcinc.ai</div>
+    </div>
+  </div>
+
+  <!-- MODE TOGGLE -->
+  <div class="mode-toggle-wrap">
+    <span class="mode-toggle-label">Mode:</span>
+    <div class="mode-toggle" id="modeToggle">
+      <button class="mode-btn active" id="btnClaude" onclick="setMode('claude')">🤖 Claude Mode</button>
+      <button class="mode-btn"        id="btnManual" onclick="setMode('manual')">👤 Manual Mode</button>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <span class="badge" id="totalBadge">0 Executives</span>
+    <span class="badge green" id="sentBadge">0 Sent</span>
+    <button class="topbar-api-btn" id="apiConfigBtn" onclick="openApiConfig()" style="display:none" title="Configure AI provider for message generation">⚙️ AI Setup</button>
+  </div>
+</div>
+
+<!-- ── LINKEDIN LIMITS BAR ── -->
+<div class="limits-bar" id="limitsBar">
+  <span class="limits-bar-title">⚠️ LinkedIn Daily Limits</span>
+
+  <div class="limit-meter">
+    <span class="limit-label">📨 Invites Today</span>
+    <div class="limit-track"><div class="limit-fill safe" id="inviteFill" style="width:0%"></div></div>
+    <span class="limit-count" id="inviteCount">0 / 25</span>
+  </div>
+
+  <div class="limit-meter">
+    <span class="limit-label">📅 This Week</span>
+    <div class="limit-track"><div class="limit-fill safe" id="weekFill" style="width:0%"></div></div>
+    <span class="limit-count" id="weekCount">0 / 100</span>
+  </div>
+
+  <div class="limit-meter">
+    <span class="limit-label">🗓 This Month</span>
+    <div class="limit-track"><div class="limit-fill safe" id="monthFill" style="width:0%"></div></div>
+    <span class="limit-count" id="monthCount">0 / 400</span>
+  </div>
+
+  <div class="limit-meter" style="margin-left:12px;">
+    <span class="limit-label">💬 Messages Today</span>
+    <div class="limit-track"><div class="limit-fill safe" id="msgFill" style="width:0%"></div></div>
+    <span class="limit-count" id="msgCount">0 / 50</span>
+  </div>
+
+  <button class="withdraw-btn" onclick="goWithdrawInvites()">↩ Withdraw Stale Invites (&gt;15 days)</button>
+  <button class="limits-reset-btn" onclick="resetLimits()" title="Reset all counters (use only for testing)">↺ Reset Counters</button>
+</div>
+
+<!-- MODE BANNERS -->
+<div class="mode-banner claude-banner" id="claudeBanner">
+  🤖 <strong>Claude Mode</strong> — Build your queue, then paste it into the Claude chat to automate sending directly from your LinkedIn account.
+</div>
+<div class="mode-banner manual-banner" id="manualBanner">
+  👤 <strong>Manual Mode</strong> — Messages are generated using your AI provider (or smart templates). Copy each message and send manually on LinkedIn. &nbsp;
+  <button onclick="openManualGuide(null)" style="padding:2px 10px;border-radius:4px;background:#f59e0b;color:#fff;border:none;font-weight:bold;cursor:pointer;font-size:8pt;">📖 How to Send</button>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR CONFIG -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      ⚙️ &nbsp;Search Configuration
+    </div>
+
+    <!-- ── MASTER MESSAGE ── -->
+    <div class="master-msg-section">
+      <div class="master-msg-header">
+        <span class="master-msg-label">
+          <span class="master-active-dot" id="masterDot"></span>
+          📢 Master Message
+        </span>
+        <span style="font-size:7pt;color:#7c3aed;font-style:italic" id="masterCharCount"></span>
+      </div>
+
+      <!-- Placeholder chips -->
+      <div class="master-var-row">
+        <span class="master-var-chip" onclick="insertMasterVar('{firstName}')">{firstName}</span>
+        <span class="master-var-chip" onclick="insertMasterVar('{company}')">{company}</span>
+        <span class="master-var-chip" onclick="insertMasterVar('{industry}')">{industry}</span>
+        <span class="master-var-chip" onclick="insertMasterVar('{solution}')">{solution}</span>
+        <span class="master-var-chip" onclick="insertMasterVar('{sender}')">{sender}</span>
+        <span class="master-var-chip" onclick="insertMasterVar('{senderTitle}')">{senderTitle}</span>
+        <span class="master-var-chip" onclick="insertMasterVar('{cta}')">{cta}</span>
+      </div>
+
+      <textarea class="master-msg-textarea" id="masterMsgText"
+        placeholder="Write your master connection message here…&#10;&#10;e.g. Hi {firstName}, I work with {industry} enterprises on {solution} at CBC. Would love to connect! — {sender}"
+        oninput="onMasterMsgChange()"></textarea>
+
+      <div class="master-msg-footer">
+        <button class="master-apply-btn" onclick="applyMasterMsgToAll()">🔄 Apply to All</button>
+        <button class="master-clear-btn" onclick="clearMasterMsg()">✕ Clear</button>
+      </div>
+      <div class="master-msg-hint" id="masterMsgHint">Type a message above — it overrides all connection messages when filled.</div>
+    </div>
+
+    <!-- Roles TAG INPUT -->
+    <div class="config-section">
+      <label class="section-label">🎯 Target Roles</label>
+
+      <!-- Quick-select presets -->
+      <div class="tag-preset-row" id="rolePresets">
+        <button class="tag-preset-btn" onclick="addRolePreset('CIO')">+ CIO</button>
+        <button class="tag-preset-btn" onclick="addRolePreset('CTO')">+ CTO</button>
+        <button class="tag-preset-btn" onclick="addRolePreset('IT Director')">+ IT Director</button>
+        <button class="tag-preset-btn" onclick="addRolePreset('CEO')">+ CEO</button>
+        <button class="tag-preset-btn" onclick="addRolePreset('CFO')">+ CFO</button>
+        <button class="tag-preset-btn" onclick="addRolePreset('COO')">+ COO</button>
+        <button class="tag-preset-btn" onclick="addRolePreset('CDO')">+ CDO</button>
+        <button class="tag-preset-btn" onclick="addRolePreset('VP IT')">+ VP IT</button>
+        <button class="tag-preset-btn" onclick="addRolePreset('CISO')">+ CISO</button>
+        <button class="tag-preset-btn" onclick="addRolePreset('CPO')">+ CPO</button>
+      </div>
+
+      <!-- Tag input box -->
+      <div class="tag-input-wrap" onclick="document.getElementById('roleInput').focus()">
+        <div class="tag-chips" id="roleTagChips"></div>
+        <div class="tag-text-row">
+          <input class="tag-text-input" id="roleInput"
+            placeholder="Type a role and press Enter or Add…"
+            onkeydown="handleTagKey(event,'role')" />
+          <button class="tag-add-btn" onclick="addTagFromInput('role')">Add</button>
+        </div>
+      </div>
+      <div class="tag-hint">Click a preset above or type any custom role (e.g. "Head of Digital")</div>
+    </div>
+
+    <!-- Industry TAG INPUT -->
+    <div class="config-section">
+      <label class="section-label">🏭 Industry</label>
+
+      <!-- Quick-select presets -->
+      <div class="tag-preset-row">
+        <button class="tag-preset-btn" onclick="addIndustryPreset('Healthcare')">+ Healthcare</button>
+        <button class="tag-preset-btn" onclick="addIndustryPreset('Pharma')">+ Pharma</button>
+        <button class="tag-preset-btn" onclick="addIndustryPreset('Manufacturing')">+ Manufacturing</button>
+        <button class="tag-preset-btn" onclick="addIndustryPreset('Logistics')">+ Logistics</button>
+        <button class="tag-preset-btn" onclick="addIndustryPreset('Technology')">+ Technology</button>
+        <button class="tag-preset-btn" onclick="addIndustryPreset('Retail')">+ Retail</button>
+        <button class="tag-preset-btn" onclick="addIndustryPreset('Energy')">+ Energy</button>
+        <button class="tag-preset-btn" onclick="addIndustryPreset('Aerospace')">+ Aerospace</button>
+        <button class="tag-preset-btn" onclick="addIndustryPreset('Financial Services')">+ Fin. Services</button>
+        <button class="tag-preset-btn" onclick="addIndustryPreset('Biotech')">+ Biotech</button>
+      </div>
+
+      <!-- Tag input box -->
+      <div class="tag-input-wrap" onclick="document.getElementById('industryInput').focus()">
+        <div class="tag-chips" id="industryTagChips"></div>
+        <div class="tag-text-row">
+          <input class="tag-text-input" id="industryInput"
+            placeholder="Type an industry and press Enter or Add…"
+            onkeydown="handleTagKey(event,'industry')" />
+          <button class="tag-add-btn" onclick="addTagFromInput('industry')">Add</button>
+        </div>
+      </div>
+      <div class="tag-hint">Click a preset or type any custom industry (e.g. "Medical Devices")</div>
+    </div>
+
+    <!-- Company Size -->
+    <div class="config-section">
+      <label class="section-label">🏢 Company Size</label>
+      <label class="check-item"><input type="checkbox" class="size-filter" value="SME"><span>SME (10–200)</span></label>
+      <label class="check-item"><input type="checkbox" class="size-filter" value="Mid-Market"><span>Mid-Market (200–1K)</span></label>
+      <label class="check-item"><input type="checkbox" class="size-filter" value="Enterprise" checked><span>Enterprise (1K–5K)</span></label>
+      <label class="check-item"><input type="checkbox" class="size-filter" value="Large Enterprise" checked><span>Large Enterprise (5K+)</span></label>
+    </div>
+
+    <!-- Geography -->
+    <div class="config-section">
+      <label class="section-label">🌍 Geography</label>
+      <label class="check-item"><input type="checkbox" class="geo-filter" value="North America" checked><span>North America</span></label>
+      <label class="check-item"><input type="checkbox" class="geo-filter" value="United Kingdom" checked><span>United Kingdom</span></label>
+      <label class="check-item"><input type="checkbox" class="geo-filter" value="Europe" checked><span>Europe (EU)</span></label>
+      <label class="check-item"><input type="checkbox" class="geo-filter" value="Asia Pacific" checked><span>Asia Pacific</span></label>
+      <label class="check-item"><input type="checkbox" class="geo-filter" value="Middle East" checked><span>Middle East &amp; Africa</span></label>
+      <label class="check-item"><input type="checkbox" class="geo-filter" value="India" checked><span>India</span></label>
+      <label class="check-item"><input type="checkbox" class="geo-filter" value="Latin America" checked><span>Latin America</span></label>
+    </div>
+
+    <!-- CBC Solution -->
+    <div class="config-section">
+      <label class="section-label">💡 CBC Solution / Product</label>
+      <select class="select-field" id="solutionSelect">
+        <optgroup label="🚀 Accelerators">
+          <option value="IBP Accelerator">IBP Accelerator — Fast-track Planning</option>
+          <option value="ERP Accelerator">ERP Accelerator — Day 1 Integration</option>
+          <option value="AI Accelerator">AI Accelerator — No-Code AI Deploy</option>
+          <option value="S&OP Accelerator">S&amp;OP Accelerator — Sales &amp; Ops Planning</option>
+        </optgroup>
+        <optgroup label="📦 Products">
+          <option value="IBP">IBP — Integrated Business Planning</option>
+          <option value="AI Chatbot">AI Chatbot / Virtual Assistant</option>
+          <option value="Demand & Forecast">Demand &amp; Forecast Engine</option>
+          <option value="Supply Chain Control Tower">Supply Chain Control Tower</option>
+          <option value="AI Decision Engine">AI Decision Engine</option>
+          <option value="No-Code AI">No-Code AI Platform</option>
+          <option value="I-Diagnostics">I-Diagnostics</option>
+        </optgroup>
+        <optgroup label="🔗 Solutions">
+          <option value="ERP Integration">ERP Integration (SAP/Oracle/Dynamics)</option>
+          <option value="Digital Twin">Digital Twin for Operations</option>
+          <option value="Inventory Optimisation">Inventory Optimisation</option>
+          <option value="Procurement AI">Procurement AI &amp; Spend Analytics</option>
+          <option value="General CBC">General CBC — Full Portfolio</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <!-- Message Style -->
+    <div class="config-section">
+      <label class="section-label">✍️ Message Style</label>
+      <select class="select-field" id="styleSelect">
+        <option value="Professional & Direct">Professional &amp; Direct</option>
+        <option value="Conversational & Warm">Conversational &amp; Warm</option>
+        <option value="Insight-Led">Insight-Led / Data First</option>
+        <option value="Problem-Led">Problem-Led (Pain First)</option>
+        <option value="Short & Punchy">Short &amp; Punchy (&lt;50 words)</option>
+      </select>
+    </div>
+
+    <!-- Custom Message Template -->
+    <div class="config-section">
+      <div class="custom-tpl-header">
+        <label class="section-label" style="margin-bottom:0">✏️ Custom Template</label>
+        <label class="toggle-switch" title="Enable custom message template">
+          <input type="checkbox" id="customTplToggle" onchange="onCustomTplToggle()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="custom-tpl-body" id="customTplBody">
+        <div class="tpl-vars">
+          Available placeholders — click to insert:
+          <span class="tpl-var-chip" onclick="insertTplVar('{firstName}')">{firstName}</span>
+          <span class="tpl-var-chip" onclick="insertTplVar('{company}')">{company}</span>
+          <span class="tpl-var-chip" onclick="insertTplVar('{industry}')">{industry}</span>
+          <span class="tpl-var-chip" onclick="insertTplVar('{solution}')">{solution}</span>
+          <span class="tpl-var-chip" onclick="insertTplVar('{sender}')">{sender}</span>
+          <span class="tpl-var-chip" onclick="insertTplVar('{senderTitle}')">{senderTitle}</span>
+          <span class="tpl-var-chip" onclick="insertTplVar('{cta}')">{cta}</span>
+        </div>
+        <textarea class="tpl-textarea" id="customTplText"
+          placeholder="Write your message template here…"
+          oninput="onCustomTplChange()"></textarea>
+        <button class="apply-tpl-btn" onclick="applyCustomTemplateToAll()">
+          🔄 Apply to All &amp; Regenerate Messages
+        </button>
+        <div class="tpl-status" id="customTplStatus"></div>
+      </div>
+    </div>
+
+    <!-- Sender -->
+    <div class="config-section">
+      <label class="section-label">👤 Sender Details</label>
+      <div id="senderSetupHint" style="display:none;background:#fef9c3;border:1px solid #fde68a;border-radius:4px;padding:6px 9px;font-size:8pt;color:#92400e;margin-bottom:7px">
+        👋 First time? Fill in your details — they're saved in your browser automatically.
+      </div>
+      <input class="input-field" id="senderName"  placeholder="Your Name (e.g. Suchithra R.)"          style="margin-bottom:6px" oninput="saveSenderDetails()"/>
+      <input class="input-field" id="senderTitle" placeholder="Your Title (e.g. Business Development)"  style="margin-bottom:6px" oninput="saveSenderDetails()"/>
+      <input class="input-field" id="ctaLink"     placeholder="Calendly / CTA Link (optional)"          oninput="saveSenderDetails()"/>
+    </div>
+
+    <!-- ── AI PROVIDER (Manual Mode only) ── -->
+    <div class="config-section ai-provider-section" id="aiProviderSection">
+      <label class="section-label">🧠 AI Message Provider</label>
+      <div class="provider-tabs">
+        <button class="provider-tab active" id="tabTpl"     onclick="switchProvider('template')">📝 Templates</button>
+        <button class="provider-tab"        id="tabOpenAI"  onclick="switchProvider('openai')">OpenAI</button>
+        <button class="provider-tab"        id="tabGemini"  onclick="switchProvider('gemini')">Gemini</button>
+        <button class="provider-tab"        id="tabOllama"  onclick="switchProvider('ollama')">🦙 Ollama</button>
+      </div>
+
+      <!-- Templates (no key) -->
+      <div class="provider-pane show" id="paneTemplate">
+        <div style="font-size:8.5pt;color:var(--muted);line-height:1.5;padding:6px 8px;background:var(--gray);border-radius:4px;">
+          Smart templates auto-personalise messages using executive name, industry and solution. <strong>No API key needed.</strong>
+        </div>
+      </div>
+
+      <!-- OpenAI -->
+      <div class="provider-pane" id="paneOpenai">
+        <div class="api-key-row">
+          <input class="api-key-input" type="password" id="openaiKey" placeholder="sk-…" />
+          <button class="test-api-btn" onclick="testProvider('openai')">Test</button>
+        </div>
+        <select class="select-field" id="openaiModel" style="font-size:8.5pt;margin-bottom:4px">
+          <option value="gpt-4o-mini">GPT-4o Mini (fast, cheap)</option>
+          <option value="gpt-4o">GPT-4o (best quality)</option>
+          <option value="gpt-3.5-turbo">GPT-3.5 Turbo (fastest)</option>
+        </select>
+        <div class="api-status" id="openaiStatus"></div>
+      </div>
+
+      <!-- Gemini -->
+      <div class="provider-pane" id="paneGemini">
+        <div class="api-key-row">
+          <input class="api-key-input" type="password" id="geminiKey" placeholder="AIza…" />
+          <button class="test-api-btn" onclick="testProvider('gemini')">Test</button>
+        </div>
+        <select class="select-field" id="geminiModel" style="font-size:8.5pt;margin-bottom:4px">
+          <option value="gemini-1.5-flash">Gemini 1.5 Flash (free tier)</option>
+          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+        </select>
+        <div class="api-status" id="geminiStatus"></div>
+        <div style="font-size:7.5pt;color:var(--muted);margin-top:3px">Free tier: 15 req/min · Get key at aistudio.google.com</div>
+      </div>
+
+      <!-- Ollama (local) -->
+      <div class="provider-pane" id="paneOllama">
+        <div style="font-size:8.5pt;color:var(--muted);margin-bottom:6px">Runs locally. Install: <a href="https://ollama.com" target="_blank" style="color:var(--blue)">ollama.com</a> → free, private.</div>
+        <input class="api-key-input" id="ollamaUrl" placeholder="http://localhost:11434" style="width:100%;margin-bottom:6px" />
+        <select class="select-field" id="ollamaModel" style="font-size:8.5pt;margin-bottom:4px">
+          <option value="llama3.1">Llama 3.1 8B (recommended)</option>
+          <option value="mistral">Mistral 7B</option>
+          <option value="gemma2">Gemma 2 9B</option>
+          <option value="phi3">Phi-3 Mini (low RAM)</option>
+        </select>
+        <button class="test-api-btn" style="width:100%" onclick="testProvider('ollama')">Test Connection</button>
+        <div class="api-status" id="ollamaStatus"></div>
+      </div>
+    </div>
+
+    <div class="config-section">
+      <button class="apply-btn" onclick="applyFilters()">🔍 Apply Filters &amp; Refresh</button>
+      <button class="save-search-btn" onclick="openSaveSearchModal()">💾 Save Current Search</button>
+      <button class="reset-btn" onclick="resetFilters()">↺ Reset to Defaults</button>
+    </div>
+
+    <!-- ── SAVED SEARCHES ── -->
+    <div class="config-section">
+      <label class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+        <span>🔖 Saved Searches</span>
+        <span id="savedSearchCount" style="font-size:8pt;color:var(--muted);font-weight:normal;text-transform:none;letter-spacing:0">0 saved</span>
+      </label>
+      <div id="savedSearchList">
+        <div class="search-empty">No saved searches yet.<br/>Set filters above and click "Save Current Search".</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="search-box">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="#94a3b8"><circle cx="9" cy="9" r="7" stroke="#94a3b8" stroke-width="2" fill="none"/><line x1="14" y1="14" x2="19" y2="19" stroke="#94a3b8" stroke-width="2"/></svg>
+        <input type="text" id="searchInput" placeholder="Search executives, companies, roles…" oninput="renderCards()"/>
+      </div>
+      <select class="sort-select" id="sortSelect" onchange="renderCards()">
+        <option value="name">Sort: Name</option>
+        <option value="company">Sort: Company</option>
+        <option value="role">Sort: Role</option>
+        <option value="geo">Sort: Geography</option>
+      </select>
+      <button class="select-all-btn" onclick="selectAll()">☑ Select All</button>
+      <button class="clear-btn" onclick="clearSelection()">✕ Clear</button>
+      <button class="bulk-send-btn" id="bulkBtn" onclick="openBulkSendModal()" disabled>🚀 Send Selected (<span id="selCount">0</span>)</button>
+      <button class="compose-btn" id="queueToggleBtn" onclick="toggleQueuePanel()" style="background:var(--navy)">📋 View Queue (<span id="queueBadge">0</span>)</button>
+      <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="add-exec-btn" onclick="openAddExec()" title="Add a new executive by pasting their LinkedIn profile URL">➕ Add Executive</button>
+      <button class="add-exec-btn" onclick="openCampaignModal()" style="background:#f0fdf4;color:#15803d;border-color:#bbf7d0;" title="Create and manage outreach campaigns">📣 Campaigns</button>
+      <div class="stats-bar">
+        <span class="stat-chip" id="showingChip">Showing 0</span>
+        <span class="stat-chip selected" id="selectedChip">0 Selected</span>
+      </div>
+    </div>
+
+    <!-- SEND QUEUE PANEL -->
+    <div class="queue-panel" id="queuePanel">
+      <div class="queue-header">
+        <h4>📨 Send Queue — <span id="queueCount">0</span> executive(s) queued</h4>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="send-all-queue-btn" onclick="sendAllFromQueue()" id="sendAllQueueBtn">🚀 Send All Now</button>
+          <button class="copy-queue-btn" id="queueActionBtn" onclick="queueMainAction()">📋 Copy for Claude</button>
+          <button class="clear-queue-btn" onclick="clearQueue()">🗑 Clear</button>
+        </div>
+      </div>
+      <table class="queue-table">
+        <thead>
+          <tr>
+            <th>Name</th><th>Title & Company</th><th>Message Preview</th><th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="queueTableBody"></tbody>
+      </table>
+      <p style="font-size:8.5pt;color:var(--muted);margin-top:10px;font-style:italic">
+        💡 Click <strong>"Copy Queue for Claude"</strong> → paste into the chat → I'll send each connection request directly from your LinkedIn account.
+      </p>
+    </div>
+
+    <!-- CARD GRID + PROFILE PANEL ROW -->
+    <div style="display:flex;flex:1;overflow:hidden;">
+
+    <!-- CARD GRID -->
+    <div class="content-area" style="flex:1;overflow-y:auto;">
+      <div class="exec-grid" id="execGrid"></div>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="3"/><text x="18" y="42" font-size="24" fill="currentColor">👤</text></svg>
+        <p>No executives match your current filters</p>
+        <small id="emptyHint">Try adjusting roles, industries or company size in the left panel.<br/>To add executives from a new industry, click <strong>➕ Add Executive</strong> in the toolbar above and paste their LinkedIn profile URL.</small>
+      </div>
+    </div><!-- end content-area -->
+
+    <!-- ── PROFILE PANEL (right side) ── -->
+    <div class="profile-panel" id="profilePanel">
+      <div class="profile-panel-header">
+        <h4>👤 Executive Profile</h4>
+        <button class="profile-panel-close" onclick="closeProfilePanel()">×</button>
+      </div>
+      <div class="profile-panel-body" id="profilePanelBody"></div>
+    </div>
+
+    </div><!-- end flex row -->
+  </div>
+</div>
+
+<!-- ── MESSAGE MODAL ── -->
+<div class="modal-overlay" id="msgModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✉️ Connection Request Message</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-exec-info">
+        <div class="modal-avatar" id="modalAvatar"></div>
+        <div>
+          <div class="modal-name" id="modalName"></div>
+          <div class="modal-role" id="modalRole"></div>
+        </div>
+      </div>
+
+      <div class="msg-type-tabs">
+        <button class="msg-tab active" onclick="switchTab(this,'connection')">🤝 Connection Note</button>
+        <button class="msg-tab" onclick="switchTab(this,'followup1')">📩 Follow-up 1</button>
+        <button class="msg-tab" onclick="switchTab(this,'followup2')">📊 Follow-up 2</button>
+        <button class="msg-tab" onclick="switchTab(this,'cta')">🎯 Soft CTA</button>
+        <button class="msg-tab" onclick="switchTab(this,'inmail')">📧 InMail</button>
+      </div>
+
+      <!-- Master Message active banner (hidden by default) -->
+      <div id="masterMsgBanner" style="display:none;align-items:center;gap:7px;
+        background:#f3e8ff;border:1.5px solid #d8b4fe;border-radius:5px;
+        padding:5px 10px;margin-bottom:8px;font-size:8pt;color:#5b21b6;font-weight:bold">
+        📢 Using your Master Message &nbsp;
+        <span style="font-weight:normal;color:#7c3aed">Edit it in the sidebar above the filters</span>
+      </div>
+
+      <div class="msg-label">
+        Message <span class="char-counter" id="charCount">0 / 300 chars</span>
+      </div>
+      <textarea class="msg-textarea" id="msgTextarea" oninput="updateCharCount()" rows="6"></textarea>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px">
+        <div class="msg-hint" id="msgHint">Connection notes are limited to 300 characters on LinkedIn.</div>
+        <button onclick="copyMessage()" title="Copy message to clipboard"
+          style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:8pt;cursor:pointer;color:var(--muted);flex-shrink:0;margin-left:8px"
+          id="inlineCopyBtn">📋 Copy</button>
+      </div>
+    </div><!-- end modal-body -->
+
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn send" id="modalSendBtn" onclick="sendFromModal()">📨 Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── BULK SEND MODAL ── -->
+<div class="modal-overlay" id="bulkSendModal">
+  <div class="modal bulk-send-modal">
+    <div class="modal-header">
+      <h3 id="bsModalTitle">🚀 Bulk Send — Ready to Go</h3>
+      <button class="modal-close" onclick="document.getElementById('bulkSendModal').classList.remove('open')">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Stats row -->
+      <div class="bulk-send-summary" id="bsSummary"></div>
+
+      <!-- Limit warning -->
+      <div class="bs-limit-warn hide" id="bsLimitWarn">
+        ⚠️ <span id="bsLimitWarnText"></span>
+      </div>
+
+      <!-- Exec list with message previews -->
+      <div class="bs-exec-list" id="bsExecList"></div>
+
+      <!-- How-to-send guide -->
+      <div id="bsGuideWrap">
+        <div style="font-size:9pt;font-weight:bold;color:var(--navy);margin-bottom:6px">📋 How to Send — Follow these 3 steps:</div>
+        <div class="auto-steps">
+          <div class="auto-step auto-step-done" id="bsStep1">
+            <div class="auto-step-num">1</div>
+            <div class="auto-step-text">
+              <strong>Save your queue file</strong> — Click the green button below. It downloads <code>outreach_queue.json</code>.
+              Save it inside your <strong>Marketing Agents</strong> folder (same folder as this dashboard).
+            </div>
+          </div>
+          <div class="auto-step" id="bsStep2">
+            <div class="auto-step-num">2</div>
+            <div class="auto-step-text">
+              <strong>Make sure you're logged into LinkedIn</strong> in your Chrome browser.
+            </div>
+          </div>
+          <div class="auto-step" id="bsStep3">
+            <div class="auto-step-num">3</div>
+            <div class="auto-step-text">
+              <strong>Tell Claude in this Cowork chat:</strong><br>
+              <span style="background:#f3e8ff;color:#5b21b6;padding:3px 8px;border-radius:4px;font-family:monospace;font-size:8.5pt;display:inline-block;margin-top:4px">
+                "Send my LinkedIn outreach queue"
+              </span>
+              <br><span style="font-size:8pt;color:var(--muted);margin-top:3px;display:block">Claude will read the file and automate each connection request in your browser.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end modal-body -->
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="document.getElementById('bulkSendModal').classList.remove('open')">Cancel</button>
+      <button id="bsSendBtn" class="btn-export-queue" onclick="exportQueueFile()">💾 Save Queue File (Step 1)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── BULK MODAL (legacy) ── -->
+<div class="modal-overlay" id="bulkModal">
+  <div class="modal bulk-modal">
+    <div class="modal-header">
+      <h3>📨 Bulk Connection Requests</h3>
+      <button class="modal-close" onclick="closeBulkModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:9.5pt;color:var(--muted);margin-bottom:12px">The following executives will be queued. Click each card's LinkedIn link to send your personalised note.</p>
+      <div class="bulk-list" id="bulkList"></div>
+    </div><!-- end modal-body -->
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeBulkModal()">Cancel</button>
+      <button class="modal-btn copy" onclick="copyAllMessages()">📋 Copy All Messages</button>
+      <button class="modal-btn send" onclick="markAllSent()">✅ Mark All as Sent</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADD EXECUTIVE MODAL ── -->
+<div class="modal-overlay" id="addExecModal">
+  <div class="modal" style="width:500px">
+    <div class="modal-header">
+      <h3>➕ Add Executive</h3>
+      <button class="modal-close" onclick="closeAddExec()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:9.5pt;color:var(--muted);margin-bottom:14px">
+        Paste the executive's direct LinkedIn profile URL (e.g. <code style="background:#f1f5f9;padding:2px 6px;border-radius:3px">linkedin.com/in/their-name</code>) and fill in their details. The profile link will open their page directly — no search pages.
+      </p>
+      <div style="display:grid;gap:10px">
+        <div>
+          <div class="msg-label" style="margin-bottom:4px">LinkedIn Profile URL <span style="color:var(--red)">*</span></div>
+          <input class="input-field" id="addUrl" placeholder="https://www.linkedin.com/in/their-name-id/" style="font-size:9.5pt"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">Full Name <span style="color:var(--red)">*</span></div>
+            <input class="input-field" id="addName" placeholder="e.g. Dr. Jane Smith"/>
+          </div>
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">Job Title <span style="color:var(--red)">*</span></div>
+            <input class="input-field" id="addTitle" placeholder="e.g. Chief Information Officer"/>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">Company</div>
+            <input class="input-field" id="addCompany" placeholder="e.g. NHS England"/>
+          </div>
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">Location</div>
+            <input class="input-field" id="addLocation" placeholder="e.g. London, UK"/>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">Industry</div>
+            <select class="select-field" id="addIndustry">
+              <option value="Healthcare">Healthcare</option>
+              <option value="Pharma">Pharma</option>
+              <option value="Manufacturing">Manufacturing</option>
+              <option value="Logistics">Logistics</option>
+              <option value="Technology">Technology</option>
+              <option value="Retail">Retail</option>
+              <option value="Energy">Energy</option>
+              <option value="Aerospace">Aerospace</option>
+              <option value="Financial Services">Financial Services</option>
+              <option value="Biotech">Biotech</option>
+            </select>
+          </div>
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">Company Size</div>
+            <select class="select-field" id="addSize">
+              <option value="SME">SME</option>
+              <option value="Mid-Market">Mid-Market</option>
+              <option value="Enterprise" selected>Enterprise</option>
+              <option value="Large Enterprise">Large Enterprise</option>
+            </select>
+          </div>
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">Geography</div>
+            <select class="select-field" id="addGeo">
+              <option value="India">India</option>
+              <option value="North America">North America</option>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="Europe">Europe</option>
+              <option value="Asia Pacific">Asia Pacific</option>
+              <option value="Middle East">Middle East</option>
+              <option value="Latin America">Latin America</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div><!-- end modal-body -->
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeAddExec()">Cancel</button>
+      <button class="modal-btn send" onclick="saveNewExec()">➕ Add to Dashboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CAMPAIGN MODAL ── -->
+<div class="modal-overlay" id="campaignModal">
+  <div class="modal campaign-modal">
+    <div class="modal-header">
+      <h3>📣 Campaign Manager</h3>
+      <button class="modal-close" onclick="closeCampaignModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Existing campaigns -->
+      <div class="msg-label" style="margin-bottom:8px">Active Campaigns</div>
+      <div class="campaign-list" id="campaignList">
+        <p style="color:var(--muted);font-size:9pt;font-style:italic">No campaigns yet. Create one below.</p>
+      </div>
+
+      <!-- Create new campaign -->
+      <div class="msg-label" style="margin:14px 0 8px">➕ Create New Campaign</div>
+      <div class="create-campaign-form">
+        <div class="form-row">
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">Campaign Name <span style="color:var(--red)">*</span></div>
+            <input class="input-field" id="campName" placeholder="e.g. Healthcare CIOs — IBP Q2"/>
+          </div>
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">CBC Solution / Product</div>
+            <select class="select-field" id="campSolution">
+              <optgroup label="🚀 Accelerators">
+                <option value="IBP Accelerator">IBP Accelerator</option>
+                <option value="ERP Accelerator">ERP Accelerator</option>
+                <option value="AI Accelerator">AI Accelerator</option>
+                <option value="S&OP Accelerator">S&amp;OP Accelerator</option>
+              </optgroup>
+              <optgroup label="📦 Products">
+                <option value="IBP">IBP — Integrated Business Planning</option>
+                <option value="AI Chatbot">AI Chatbot</option>
+                <option value="Demand & Forecast">Demand &amp; Forecast</option>
+                <option value="Supply Chain Control Tower">Supply Chain Control Tower</option>
+                <option value="AI Decision Engine">AI Decision Engine</option>
+                <option value="No-Code AI">No-Code AI Platform</option>
+                <option value="I-Diagnostics">I-Diagnostics</option>
+              </optgroup>
+              <optgroup label="🔗 Solutions">
+                <option value="ERP Integration">ERP Integration</option>
+                <option value="Digital Twin">Digital Twin</option>
+                <option value="Inventory Optimisation">Inventory Optimisation</option>
+                <option value="Procurement AI">Procurement AI</option>
+                <option value="General CBC">General CBC</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">Target Industry</div>
+            <select class="select-field" id="campIndustry">
+              <option value="Healthcare">Healthcare</option>
+              <option value="Pharma">Pharma</option>
+              <option value="Manufacturing">Manufacturing</option>
+              <option value="Logistics">Logistics</option>
+              <option value="Technology">Technology</option>
+              <option value="Retail">Retail</option>
+              <option value="Energy">Energy</option>
+              <option value="Financial Services">Financial Services</option>
+              <option value="All">All Industries</option>
+            </select>
+          </div>
+          <div>
+            <div class="msg-label" style="margin-bottom:4px">Target Role</div>
+            <input class="input-field" id="campRole" placeholder="e.g. CIO, CTO, IT Director"/>
+          </div>
+        </div>
+        <div class="form-row-full">
+          <div class="msg-label" style="margin-bottom:4px">
+            Custom Message Template
+            <span class="char-counter" id="campMsgCount">0 / 300</span>
+          </div>
+          <textarea class="msg-textarea" id="campMessage" rows="4"
+            oninput="document.getElementById('campMsgCount').textContent=this.value.length+' / 300'"
+            placeholder="Hi {firstName}, I lead partnerships at CBC. We help {industry} leaders like you modernise operations with {solution}. Would love to connect! — {sender}"></textarea>
+          <div class="msg-hint">Use: {firstName} {industry} {solution} {company} {sender} {senderTitle} {cta}</div>
+        </div>
+        <div style="text-align:right">
+          <button class="modal-btn send" style="width:auto;padding:8px 24px" onclick="createCampaign()">➕ Create Campaign</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── MANUAL SEND GUIDE MODAL ── -->
+<div class="modal-overlay" id="manualGuideModal">
+  <div class="modal guide-modal">
+    <div class="modal-header">
+      <h3>📖 How to Send a Connection Request Manually</h3>
+      <button class="modal-close" onclick="closeManualGuide()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-exec-info" id="guideExecInfo" style="display:none">
+        <div class="modal-avatar" id="guideAvatar"></div>
+        <div>
+          <div class="modal-name" id="guideName"></div>
+          <div class="modal-role" id="guideRole"></div>
+        </div>
+      </div>
+
+      <div class="guide-steps">
+        <div class="guide-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">Copy your personalised message</div>
+            <div class="step-desc">Click the button below to copy the message to your clipboard. It's personalised for this executive.</div>
+            <div class="step-action">
+              <div class="guide-msg-box" id="guideMsg"></div>
+              <button class="modal-btn copy" style="width:auto;padding:7px 18px" onclick="copyGuideMsg()">📋 Copy Message</button>
+              <span id="guideCopied" style="color:var(--green);font-size:9pt;margin-left:8px;display:none">✓ Copied!</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">Open their LinkedIn profile</div>
+            <div class="step-desc">Click the button to open their profile in a new tab. Their direct LinkedIn URL is pre-loaded.</div>
+            <div class="step-action" style="margin-top:6px">
+              <button class="modal-btn send" style="width:auto;padding:7px 18px;background:#0a66c2" id="guideLinkedInBtn" onclick="openGuideLinkedIn()">🔗 Open LinkedIn Profile</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">Click "Connect" on their profile</div>
+            <div class="step-desc">On their profile page, click the blue <strong>Connect</strong> button (or the <strong>More → Connect</strong> dropdown). LinkedIn will show a dialog.</div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <div class="step-title">Click "Add a note" and paste your message</div>
+            <div class="step-desc">In the connection dialog, click <strong>Add a note</strong>, then paste the message you copied in Step 1 (Ctrl+V / Cmd+V). Keep it under 300 characters.</div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <div class="step-title">Click Send &amp; mark as done</div>
+            <div class="step-desc">Click <strong>Send</strong> in LinkedIn. Then come back here and mark this executive as sent.</div>
+            <div class="step-action" style="margin-top:6px">
+              <button class="modal-btn send" style="width:auto;padding:7px 18px" onclick="markGuideSent()">✅ Mark as Sent</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--orange-light);border-radius:6px;padding:10px 14px;margin-top:14px;font-size:8.5pt;color:var(--orange)">
+        ⚠️ <strong>LinkedIn limit reminder:</strong> Send max <strong>20–25 invites per day</strong> to keep your account safe. The limits bar at the top tracks your usage.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SAVE SEARCH MODAL ── -->
+<div class="modal-overlay" id="saveSearchModal">
+  <div class="modal save-modal">
+    <div class="modal-header">
+      <h3>💾 Save Current Search</h3>
+      <button class="modal-close" onclick="closeSaveSearchModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:9.5pt;color:var(--muted);margin-bottom:14px">
+        Save your current filter configuration as a named search. You can run it again anytime with one click — no need to re-configure filters.
+      </p>
+
+      <div style="margin-bottom:14px">
+        <div class="msg-label" style="margin-bottom:4px">Search Name <span style="color:var(--red)">*</span></div>
+        <input class="input-field" id="saveSearchName" placeholder='e.g. "Healthcare CIOs — India" or "Manufacturing CTOs — Global"' />
+      </div>
+
+      <!-- Preview of what will be saved -->
+      <div style="background:var(--gray);border-radius:6px;padding:12px 14px;margin-bottom:16px" id="saveSearchPreview"></div>
+
+    </div><!-- end modal-body -->
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeSaveSearchModal()">Cancel</button>
+      <button class="modal-btn send" onclick="confirmSaveSearch()">💾 Save Search</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATA — Real verified LinkedIn profiles
+//  All URLs are direct /in/ profile links, verified live.
+//  To add more executives: paste their LinkedIn /in/ URL
+//  into the linkedIn field below.
+// ═══════════════════════════════════════════════════════
+const ALL_EXECUTIVES = [
+  { id:1,  name:"Neelesh Shinde",             title:"Group Chief Technical Officer & Head - Projects", company:"Jupiter Hospital",                location:"Thane, Maharashtra, India",       industry:"Healthcare", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/neelesh-shinde-5383392b/" },
+  { id:2,  name:"Rupak Barua",                title:"Managing Director & CEO",                          company:"Woodlands Multispeciality Hospital",location:"Kolkata, West Bengal, India",     industry:"Healthcare", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/rupak-barua-a57b1647/" },
+  { id:3,  name:"Dr. Mayank Somani",          title:"Managing Director & CEO — Healthcare",             company:"Apollomedics Super Speciality Hospital",location:"Lucknow, Uttar Pradesh, India",industry:"Healthcare", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/dr-mayank-somani-75b49a12/" },
+  { id:4,  name:"Murali DR",                  title:"Chief Executive Officer",                          company:"Pharma",                           location:"Hyderabad, Telangana, India",      industry:"Pharma",     size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/murali-dr-66556b38/" },
+  { id:5,  name:"Raja Ghosh",                 title:"CEO & Technical Director",                         company:"Hospital",                         location:"Delhi, India",                     industry:"Healthcare", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/raja-ghosh-5bab0a2b/" },
+  { id:6,  name:"Avinash Kumar Singh",        title:"CTO / CIO / CDO / CISO",                          company:"Healthcare & Pharma Sector",       location:"Gurgaon, Haryana, India",          industry:"Healthcare", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/avinash-kumar-singh-digital/" },
+  { id:7,  name:"Joseph Stervin",             title:"CTO / CIO / CDO — AI & Digital Architect",        company:"Healthcare Technology",            location:"Chennai, Tamil Nadu, India",        industry:"Healthcare", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/josephstervin/" },
+  { id:8,  name:"Jorge Eduardo Perez",        title:"CTO / CIO / IT Advisor",                          company:"Hospital Anchieta (Past CIO)",      location:"Brazil",                           industry:"Healthcare", size:"Enterprise",       geo:"Latin America", linkedIn:"https://www.linkedin.com/in/jorgeeduardoperez/" },
+  { id:9,  name:"Puneet Singh Waraich",       title:"Senior Healthcare IT Executive | CIO / CTO",      company:"Stanford Health Care",             location:"Palo Alto, California, USA",        industry:"Healthcare", size:"Large Enterprise", geo:"North America", linkedIn:"https://www.linkedin.com/in/puneet-singh-waraich-chcio/" },
+  { id:10, name:"Gerard Dass",                title:"CIO / Chief Information Officer",                  company:"Healthcare (Angel Investor)",      location:"United States",                    industry:"Healthcare", size:"Large Enterprise", geo:"North America", linkedIn:"https://www.linkedin.com/in/gerarddass/" },
+  { id:11, name:"Frank Deo",                  title:"Senior Executive: CTO / CPO",                     company:"Healthcare & AI",                  location:"New York City, USA",               industry:"Healthcare", size:"Enterprise",       geo:"North America", linkedIn:"https://www.linkedin.com/in/frankdeo1/" },
+  { id:12, name:"Jérôme Vetillard",           title:"CTO / VP R&D / Chief Product Officer",            company:"Healthcare & Life Sciences EMEA",  location:"Greater Paris, France",            industry:"Pharma",     size:"Large Enterprise", geo:"Europe",        linkedIn:"https://www.linkedin.com/in/jeromev/" },
+  { id:13, name:"Shank Iyer",                 title:"Enterprise Technology & Operations Executive",     company:"AI-driven Cardiovascular Diagnostics",location:"Los Angeles, California, USA",  industry:"Healthcare", size:"Enterprise",       geo:"North America", linkedIn:"https://www.linkedin.com/in/shank/" },
+  { id:14, name:"Alexis Agopian",             title:"Technical Advisory Director | CIO/CTO-as-a-Service","company":"Digital Health / NEOM",        location:"Abu Dhabi, UAE",                   industry:"Healthcare", size:"Large Enterprise", geo:"Middle East",   linkedIn:"https://www.linkedin.com/in/alexisagopian/" },
+  { id:15, name:"Gregory A. Nicholas",        title:"Healthcare CIO / CISO",                           company:"Healthcare Technology Consulting", location:"Austin, Texas, USA",               industry:"Healthcare", size:"Enterprise",       geo:"North America", linkedIn:"https://www.linkedin.com/in/gregoryanicholas/" },
+  { id:16, name:"Joseph Gimigliano",          title:"Strategic CTO — Healthcare Innovation",           company:"Northwell Health",                 location:"New York City, USA",               industry:"Healthcare", size:"Large Enterprise", geo:"North America", linkedIn:"https://www.linkedin.com/in/josephgimigliano/" },
+
+  // ── MANUFACTURING ──
+  { id:17, name:"Kuljeet Sethi",              title:"CIO & CTO | Manufacturing Digital Transformation | ERP • MES • Industry 4.0", company:"Bajajsons Ltd",                    location:"Ludhiana, Punjab, India",          industry:"Manufacturing", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/kuljeetsethi/" },
+  { id:18, name:"Sachin Tyagi",               title:"CIO | SAP S/4HANA | Digital Manufacturing & SCM | Industry 4.0", company:"Shriram Pistons & Rings Ltd",      location:"Delhi, India",                     industry:"Manufacturing", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/sachin-tyagi-927b593/" },
+  { id:19, name:"Vishal Kapil",               title:"Group CIO & CTO",                                 company:"MAIR Group",                       location:"Dubai, UAE",                       industry:"Manufacturing", size:"Large Enterprise", geo:"Middle East",   linkedIn:"https://www.linkedin.com/in/vishal-kapil-a308a16/" },
+  { id:20, name:"Rajeev Pradhan",             title:"Chief Information Officer | Global Digital Transformation | AI & GenAI", company:"Wadia Group",                      location:"India",                            industry:"Manufacturing", size:"Large Enterprise", geo:"India",         linkedIn:"https://www.linkedin.com/in/rajeev-pradhan-4bb88b1/" },
+  { id:21, name:"Dr. Bharathidasan M",        title:"CIO | CTO | CISO | Enterprise AI & Digital Transformation", company:"Manufacturing Conglomerate",        location:"India",                            industry:"Manufacturing", size:"Large Enterprise", geo:"India",         linkedIn:"https://www.linkedin.com/in/mbharathidasan/" },
+  { id:22, name:"Kapil Pal",                  title:"CIO | CTO | Global IT Leader | Manufacturing & FMCG | AI Solutions Architect", company:"DXC Technology (ex-Director)",     location:"India",                            industry:"Manufacturing", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/kapil-pal-6816381/" },
+  { id:23, name:"Himanshu Dhabalia",          title:"CIO | CTO | CDO | Manufacturing & Retail | Digital Transformation", company:"NITZZ Global IT Services",         location:"Mumbai, Maharashtra, India",       industry:"Manufacturing", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/hdhabalia/" },
+  { id:24, name:"Fariz Rahmansyah",           title:"Global IT Director | AI-driven Manufacturing & Supply Chain | CIO/CTO", company:"Manufacturing Enterprise (Regional)", location:"Kuala Lumpur, Malaysia",           industry:"Manufacturing", size:"Enterprise",       geo:"Asia Pacific",  linkedIn:"https://www.linkedin.com/in/farizrahmansyah/" },
+  { id:25, name:"Namrita Mahindro",           title:"Global AI & Digital Transformation Leader | Ex-CDO & CIO",  company:"Aditya Birla Chemicals / Mahindra / Tata", location:"New Delhi, India",                 industry:"Manufacturing", size:"Large Enterprise", geo:"India",         linkedIn:"https://www.linkedin.com/in/namritasehgal/" },
+  { id:26, name:"Ashok Cherian",              title:"Chief Information Technology Officer (CIO/CTO) | SAP Manufacturing & SCM", company:"Manufacturing Enterprise",         location:"Ahmedabad, Gujarat, India",        industry:"Manufacturing", size:"Enterprise",       geo:"India",         linkedIn:"https://www.linkedin.com/in/acherian/" },
+];
+
+let filteredData = [...ALL_EXECUTIVES];
+let selectedIds  = new Set();
+let sentIds      = new Set();
+let queueIds     = new Set();
+let sendQueue    = [];   // [{id, name, title, company, linkedIn, message, status}]
+let currentExec  = null;
+let currentTab   = 'connection';
+
+// ═══════════════════════════════════════════════════════
+//  SENDER DETAILS — optional, persisted per browser
+// ═══════════════════════════════════════════════════════
+function loadSenderDetails() {
+  const saved = JSON.parse(localStorage.getItem('cbc_sender') || '{}');
+  if (saved.name)  document.getElementById('senderName').value  = saved.name;
+  if (saved.title) document.getElementById('senderTitle').value = saved.title;
+  if (saved.cta)   document.getElementById('ctaLink').value     = saved.cta;
+  // Show first-time hint if all fields are empty
+  const anyFilled = saved.name || saved.title || saved.cta;
+  const hint = document.getElementById('senderSetupHint');
+  if (hint) hint.style.display = anyFilled ? 'none' : 'block';
+}
+function saveSenderDetails() {
+  localStorage.setItem('cbc_sender', JSON.stringify({
+    name:  document.getElementById('senderName').value,
+    title: document.getElementById('senderTitle').value,
+    cta:   document.getElementById('ctaLink').value
+  }));
+  const hint = document.getElementById('senderSetupHint');
+  if (hint) hint.style.display = 'none';
+}
+// Helper — returns sender value or empty string (no hardcoded fallback)
+function getSender()      { return document.getElementById('senderName').value.trim(); }
+function getSenderTitle() { return document.getElementById('senderTitle').value.trim(); }
+function getCTA()         { return document.getElementById('ctaLink').value.trim(); }
+// Build sender sign-off — omits gracefully if fields empty
+function senderSignoff() {
+  const n = getSender(), t = getSenderTitle();
+  if (n && t) return `— ${n}, ${t}`;
+  if (n)      return `— ${n}`;
+  if (t)      return `— ${t}`;
+  return '';
+}
+
+// ═══════════════════════════════════════════════════════
+//  MASTER MESSAGE
+// ═══════════════════════════════════════════════════════
+let _masterMsgValue = '';   // JS-side cache — always in sync with the textarea
+
+function getMasterMsg() {
+  return _masterMsgValue;
+}
+
+function onMasterMsgChange() {
+  const el   = document.getElementById('masterMsgText');
+  _masterMsgValue = el ? el.value.trim() : '';   // sync JS variable immediately
+
+  const dot  = document.getElementById('masterDot');
+  const hint = document.getElementById('masterMsgHint');
+  const cnt  = document.getElementById('masterCharCount');
+  if (dot)  dot.classList.toggle('on', _masterMsgValue.length > 0);
+  if (cnt)  cnt.textContent = _masterMsgValue.length > 0 ? `${_masterMsgValue.length} chars` : '';
+  if (hint) hint.textContent = _masterMsgValue.length > 0
+    ? '✅ Active — all new connection messages will use this master message'
+    : 'Type a message above — it overrides all connection messages when filled.';
+
+  // If the compose modal is currently open, live-refresh the message textarea
+  const modal = document.getElementById('msgModal');
+  if (modal && modal.classList.contains('open') && currentTab === 'connection') {
+    refreshMessage();
+  }
+}
+
+function insertMasterVar(placeholder) {
+  const ta = document.getElementById('masterMsgText');
+  ta.focus();
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  ta.value = ta.value.slice(0, s) + placeholder + ta.value.slice(e);
+  ta.selectionStart = ta.selectionEnd = s + placeholder.length;
+  onMasterMsgChange();
+}
+
+function clearMasterMsg() {
+  const el = document.getElementById('masterMsgText');
+  if (el) el.value = '';
+  _masterMsgValue = '';
+  onMasterMsgChange();
+  showToast('Master message cleared — using built-in templates', false);
+}
+
+// Interpolate a message string with exec data + sidebar field values
+function interpolateMasterMsg(template, exec) {
+  const sender      = getSender();
+  const senderTitle = getSenderTitle();
+  const cta         = getCTA();
+  const solution    = document.getElementById('solutionSelect').value  || 'IBP';
+  const firstName   = exec.name.split(' ')[0].replace(/^Dr\.?/, '').trim();
+  return template
+    .replace(/\{firstName\}/g,   firstName)
+    .replace(/\{company\}/g,     exec.company   || '')
+    .replace(/\{industry\}/g,    exec.industry  || '')
+    .replace(/\{solution\}/g,    solution)
+    .replace(/\{sender\}/g,      sender)
+    .replace(/\{senderTitle\}/g, senderTitle)
+    .replace(/\{cta\}/g,         cta);
+}
+
+function applyMasterMsgToAll() {
+  const tpl = getMasterMsg();
+  if (!tpl) { showToast('Master message is empty — type a message first', false); return; }
+  let count = 0;
+  sendQueue.forEach(item => {
+    const exec = ALL_EXECUTIVES.find(e => e.id === item.id);
+    if (exec) { item.message = interpolateMasterMsg(tpl, exec); count++; }
+  });
+  renderQueue();
+  showToast(`✅ ${count} queued message${count !== 1 ? 's' : ''} updated`, true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  CUSTOM MESSAGE TEMPLATE
+// ═══════════════════════════════════════════════════════
+let customTplEnabled = false;
+let customTplDebounce = null;
+
+// Default template shown when user first enables the feature
+const DEFAULT_CUSTOM_TPL =
+`Hi {firstName}, I work with {industry} enterprises on {solution} at CBC.
+
+Our AI-powered platform helps leaders like you at {company} cut planning cycles by 3× and achieve Day 1 ERP integration.
+
+Would love to connect and share how we can help.
+
+— {sender}, {senderTitle}`;
+
+function onCustomTplToggle() {
+  customTplEnabled = document.getElementById('customTplToggle').checked;
+  const body = document.getElementById('customTplBody');
+  body.classList.toggle('show', customTplEnabled);
+
+  if (customTplEnabled) {
+    const ta = document.getElementById('customTplText');
+    if (!ta.value.trim()) ta.value = DEFAULT_CUSTOM_TPL;
+    setCustomTplStatus('✅ Custom template active — open any message to see it applied');
+  } else {
+    setCustomTplStatus('');
+  }
+}
+
+function setCustomTplStatus(msg) {
+  const el = document.getElementById('customTplStatus');
+  if (el) el.textContent = msg;
+}
+
+// Insert placeholder at cursor position in the template textarea
+function insertTplVar(placeholder) {
+  const ta = document.getElementById('customTplText');
+  ta.focus();
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const val   = ta.value;
+  ta.value = val.slice(0, start) + placeholder + val.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + placeholder.length;
+  onCustomTplChange();
+}
+
+// Debounced auto-status update on template edit
+function onCustomTplChange() {
+  clearTimeout(customTplDebounce);
+  customTplDebounce = setTimeout(() => {
+    if (customTplEnabled) {
+      setCustomTplStatus('✏️ Template edited — click "Apply to All" to regenerate queue messages');
+    }
+  }, 400);
+}
+
+// Replace placeholders with actual exec values
+function interpolateCustomTemplate(template, exec) {
+  const sender      = getSender();
+  const senderTitle = getSenderTitle();
+  const cta         = getCTA();
+  const solution    = document.getElementById('solutionSelect').value || 'IBP';
+  const firstName   = exec.name.split(' ')[0].replace(/^Dr\.?/,'').trim();
+
+  return template
+    .replace(/\{firstName\}/g,   firstName)
+    .replace(/\{company\}/g,     exec.company   || '')
+    .replace(/\{industry\}/g,    exec.industry  || '')
+    .replace(/\{solution\}/g,    solution)
+    .replace(/\{sender\}/g,      sender)
+    .replace(/\{senderTitle\}/g, senderTitle)
+    .replace(/\{cta\}/g,         cta);
+}
+
+// Regenerate messages for every item in the send queue using current template
+function applyCustomTemplateToAll() {
+  if (!customTplEnabled) {
+    showToast('Enable the Custom Template toggle first', false);
+    return;
+  }
+  const tplText = document.getElementById('customTplText').value.trim();
+  if (!tplText) {
+    showToast('Template is empty — please write a message first', false);
+    return;
+  }
+
+  let count = 0;
+  sendQueue.forEach(item => {
+    const exec = ALL_EXECUTIVES.find(e => e.id === item.id);
+    if (exec) {
+      item.message = interpolateCustomTemplate(tplText, exec);
+      count++;
+    }
+  });
+
+  renderQueue();
+  setCustomTplStatus(`✅ Regenerated messages for ${count} queued executive${count !== 1 ? 's' : ''}`);
+  showToast(`✅ ${count} queue message${count !== 1 ? 's' : ''} updated with custom template`, true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  MESSAGE GENERATOR
+// ═══════════════════════════════════════════════════════
+function generateMessage(exec, type) {
+  // 1. Master Message overrides everything when filled (connection type only)
+  if (type === 'connection') {
+    const master = getMasterMsg();
+    if (master) return interpolateMasterMsg(master, exec);
+  }
+
+  // 2. Custom Template (sidebar toggle) — connection type only
+  if (customTplEnabled && type === 'connection') {
+    const tplText = document.getElementById('customTplText').value.trim();
+    if (tplText) return interpolateCustomTemplate(tplText, exec);
+  }
+
+  const sender  = getSender();
+  const title   = getSenderTitle();
+  const cta     = getCTA();
+  const signoff = senderSignoff();
+  const sol     = document.getElementById('solutionSelect').value;
+  const style   = document.getElementById('styleSelect').value;
+
+  const firstName = exec.name.split(' ')[0].replace(/^Dr\.?/,'').trim();
+  const co        = exec.company;
+
+  const msgs = {
+    connection: {
+      'Professional & Direct':  `Hi ${firstName}, I work with ${co}-scale enterprises on ${sol} at CBC. Our AI-powered platform has helped similar orgs cut planning cycles by 3×. Would love to connect and share insights.${signoff ? ' ' + signoff : ''}`,
+      'Conversational & Warm':  `Hi ${firstName}! Noticed your impressive work at ${co}. At CBC we help healthcare & pharma leaders like you modernise operations with ${sol}. Would be great to connect!${signoff ? ' ' + signoff : ''}`,
+      'Insight-Led':            `Hi ${firstName}, enterprises like ${co} are achieving 40% less manual data entry with CBC's ${sol}. Given your role, I thought this might be relevant. Let's connect!${signoff ? ' ' + signoff : ''}`,
+      'Problem-Led':            `Hi ${firstName}, many ${exec.industry} IT leaders tell us ERP data silos slow planning by weeks. CBC's ${sol} fixes that on Day 1. Worth a quick connect?${signoff ? ' ' + signoff : ''}`,
+      'Short & Punchy':         `Hi ${firstName}, CBC helps ${exec.industry} CIOs cut planning time by 3×. Think ${co} could benefit? Let's connect!${signoff ? ' ' + signoff : ''}`,
+    },
+    followup1: {
+      'Professional & Direct':  `Hi ${firstName}, hope you're well! Following up on my connection request. At CBC, we've helped healthcare enterprises like ${co} achieve Day 1 ERP integration and 90% document accuracy. Happy to share a quick case study — no sales pitch, just insight. Would a 15-min call next week work?${signoff ? ' ' + signoff : ''}`,
+      'Conversational & Warm':  `Hi ${firstName}, just checking in! I reached out a couple of days ago — I work with organisations like ${co} on making ${sol} actually work end-to-end. Happy to send over a quick 1-pager if useful. No pressure at all!${signoff ? ' ' + signoff : ''}`,
+      'Insight-Led':            `Hi ${firstName}, quick follow-up. We recently published a benchmark showing ${exec.industry} CIOs are losing ~14% of planning capacity to manual data entry. CBC's ${sol} closes that gap in weeks. Would you be open to a brief call?${signoff ? ' ' + signoff : ''}`,
+      'Problem-Led':            `Hi ${firstName}, still thinking about the supply chain visibility challenges common in ${exec.industry}. CBC has helped 50+ enterprises tackle exactly this. Could I share a 2-min overview?${signoff ? ' ' + signoff : ''}`,
+      'Short & Punchy':         `Hi ${firstName}, just a quick follow-up! Is ${sol} on your roadmap at ${co}? Happy to share a 1-pager.${signoff ? ' ' + signoff : ''}`,
+    },
+    followup2: {
+      'Professional & Direct':  `Hi ${firstName}, sharing a recent insight that may be relevant for ${co}: CBC clients in ${exec.industry} are running integrated S&OP cycles 3× faster using our ${sol} platform — without replacing existing ERP systems. Happy to show you how in a brief demo.${signoff ? ' ' + signoff : ''}`,
+      'Conversational & Warm':  `Hi ${firstName}, thought this might be interesting for you — one of our ${exec.industry} clients reduced manual reporting by 40% in their first quarter with CBC. Given what you're likely managing at ${co}, wondered if this resonates?${signoff ? ' ' + signoff : ''}`,
+      'Insight-Led':            `Hi ${firstName}, data point for you: 70% faster RFP creation and 3× planning speed are what CBC clients in ${exec.industry} are reporting. Given ${co}'s scale, the ROI case writes itself. Worth exploring?${signoff ? ' ' + signoff : ''}`,
+      'Problem-Led':            `Hi ${firstName}, one thing that often surprises ${exec.industry} leaders: most ERP systems handle transactions well but not decisions. CBC's ${sol} bridges that gap. Could I show you a 5-min walkthrough?${signoff ? ' ' + signoff : ''}`,
+      'Short & Punchy':         `Hi ${firstName}, CBC clients in ${exec.industry} cut planning time 3×. Quick 15-min call?${signoff ? ' ' + signoff : ''}`,
+    },
+    cta: {
+      'Professional & Direct':  `Hi ${firstName}, I've reached out a few times and want to respect your time. If ${sol} is on your agenda at ${co}, I'd love to earn 20 minutes. Book here: ${cta}. If not, no worries — happy to reconnect whenever the timing is right.${signoff ? ' ' + signoff : ''}`,
+      'Conversational & Warm':  `Hi ${firstName}, last nudge from me — promise! If CBC's ${sol} ever becomes relevant for ${co}, I'm here. In the meantime, here's a link to book a quick chat whenever suits you: ${cta}. Thanks for connecting!${signoff ? ' ' + signoff : ''}`,
+      'Insight-Led':            `Hi ${firstName}, final thought: enterprises your size in ${exec.industry} typically see ROI on ${sol} within 90 days. If you'd like to explore, here's a 20-min slot: ${cta}. Otherwise, I'll leave you in peace!${signoff ? ' ' + signoff : ''}`,
+      'Problem-Led':            `Hi ${firstName}, if the planning & data challenges we've discussed ever become a priority, CBC is ready to help. Book a no-pressure walkthrough: ${cta}. Thanks for your time!${signoff ? ' ' + signoff : ''}`,
+      'Short & Punchy':         `Hi ${firstName}, book a 15-min CBC walkthrough: ${cta}. Worth it — promise!${signoff ? ' ' + signoff : ''}`,
+    },
+    inmail: {
+      'Professional & Direct':  `Subject: ${sol} for ${co} — 3× Faster Planning\n\nHi ${firstName},\n\nI'm ${sender} from CBC (cbcinc.ai). We specialise in ${sol} for ${exec.industry} enterprises.\n\nOur clients achieve:\n• 70% faster RFP creation\n• 40% less manual data entry\n• Day 1 ERP integration (SAP / Oracle / Dynamics)\n\nGiven ${co}'s scale, I believe there's a strong fit. Would you have 20 minutes this week for a focused walkthrough?\n\nBook here: ${cta}\n\nBest,\n${sender}\n${title}, CBC`,
+      'Conversational & Warm':  `Subject: Quick Question for ${firstName} at ${co}\n\nHi ${firstName},\n\nI hope this finds you well! I'm ${sender} from CBC and we work with ${exec.industry} IT leaders on ${sol}.\n\nI noticed ${co}'s growth trajectory and wanted to reach out — we've helped similar organisations cut planning cycle times by 3× without ripping out existing ERP.\n\nWould you be open to a relaxed 15-min chat? Happy to fit around your schedule: ${cta}\n\nWarm regards,\n${sender}`,
+      'Insight-Led':            `Subject: ${exec.industry} Benchmark: 3× Faster Planning Cycles\n\nHi ${firstName},\n\nNew benchmark data might be useful for your team: ${exec.industry} enterprises using CBC's ${sol} are reporting a 70% reduction in RFP creation time and 90% document processing accuracy.\n\nGiven ${co}'s ERP footprint, integration is typically Day 1. Happy to share the full report or run a quick demo: ${cta}\n\nBest,\n${sender}, CBC`,
+      'Problem-Led':            `Subject: Solving ERP Data Silos at ${co}\n\nHi ${firstName},\n\nThe biggest complaint we hear from ${exec.industry} CIOs? "Our ERP handles transactions, not decisions."\n\nCBC's ${sol} connects your ERP data to real-time planning and AI-driven insights — with no-code deployment.\n\nI'd love to show you a 5-minute proof of concept tailored to ${co}. Book a slot: ${cta}\n\nBest,\n${sender}`,
+      'Short & Punchy':         `Subject: 20 mins → 3× faster planning at ${co}?\n\nHi ${firstName},\n\nCBC's ${sol} helps ${exec.industry} enterprises like ${co} cut planning cycles 3× — Day 1 ERP integration included.\n\nWorth 20 min? ${cta}\n\n${signoff ? '— ' + signoff : ''}`,
+    },
+  };
+
+  return (msgs[type] && msgs[type][style]) || msgs[type]['Professional & Direct'] || '';
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAG INPUT — ROLES & INDUSTRIES
+// ═══════════════════════════════════════════════════════
+let roleTags     = ['CIO', 'CTO', 'IT Director'];
+let industryTags = ['Healthcare', 'Pharma'];
+
+function renderRoleTags() {
+  document.getElementById('roleTagChips').innerHTML = roleTags.map(t =>
+    `<span class="tag-chip active">${escHtml(t)}<button class="tag-chip-remove" onclick="removeTag('role','${escHtml(t)}')" title="Remove">×</button></span>`
+  ).join('');
+}
+
+function renderIndustryTags() {
+  document.getElementById('industryTagChips').innerHTML = industryTags.map(t =>
+    `<span class="tag-chip active">${escHtml(t)}<button class="tag-chip-remove" onclick="removeTag('industry','${escHtml(t)}')" title="Remove">×</button></span>`
+  ).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function addRolePreset(val) {
+  if (!roleTags.includes(val)) { roleTags.push(val); renderRoleTags(); }
+  else showToast(`"${val}" already in roles`, false);
+}
+
+function addIndustryPreset(val) {
+  if (!industryTags.includes(val)) { industryTags.push(val); renderIndustryTags(); }
+  else showToast(`"${val}" already in industries`, false);
+}
+
+function addTagFromInput(type) {
+  const inputId = type === 'role' ? 'roleInput' : 'industryInput';
+  const arr     = type === 'role' ? roleTags : industryTags;
+  const render  = type === 'role' ? renderRoleTags : renderIndustryTags;
+  const input   = document.getElementById(inputId);
+  const val     = input.value.trim();
+  if (!val) return;
+  if (!arr.includes(val)) {
+    arr.push(val);
+    render();
+    input.value = '';
+  } else {
+    showToast(`"${val}" already added`, false);
+    input.value = '';
+  }
+}
+
+function handleTagKey(event, type) {
+  if (event.key === 'Enter') { event.preventDefault(); addTagFromInput(type); }
+}
+
+function removeTag(type, val) {
+  if (type === 'role') {
+    roleTags = roleTags.filter(t => t !== val);
+    renderRoleTags();
+  } else {
+    industryTags = industryTags.filter(t => t !== val);
+    renderIndustryTags();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  ROLE SYNONYM MAP — abbreviations ↔ full titles
+// ═══════════════════════════════════════════════════════
+const ROLE_SYNONYMS = {
+  'CIO':         ['cio', 'chief information officer'],
+  'CTO':         ['cto', 'chief technology officer', 'chief technical officer'],
+  'IT Director': ['it director', 'director of it', 'director, it', 'director of information technology', 'head of it', 'head of technology', 'head of information technology'],
+  'CEO':         ['ceo', 'chief executive officer', 'managing director', 'md &', '& ceo'],
+  'CFO':         ['cfo', 'chief financial officer'],
+  'COO':         ['coo', 'chief operating officer'],
+  'CDO':         ['cdo', 'chief digital officer', 'chief data officer'],
+  'CISO':        ['ciso', 'chief information security officer'],
+  'CPO':         ['cpo', 'chief product officer', 'chief people officer'],
+  'VP IT':       ['vp it', 'vp of it', 'vice president it', 'vice president of it', 'vp information technology'],
+};
+
+function titleMatchesRole(titleLower, roleTag) {
+  const synonyms = ROLE_SYNONYMS[roleTag.toUpperCase()] || ROLE_SYNONYMS[roleTag] || null;
+  if (synonyms) {
+    return synonyms.some(syn => titleLower.includes(syn));
+  }
+  // For custom tags not in the map, fall back to substring match
+  return titleLower.includes(roleTag.toLowerCase());
+}
+
+// ═══════════════════════════════════════════════════════
+//  FILTERING & RENDERING
+// ═══════════════════════════════════════════════════════
+function applyFilters() {
+  const roles      = roleTags;
+  const industries = industryTags;
+  const sizes      = [...document.querySelectorAll('.size-filter:checked')].map(c=>c.value);
+  const geos       = [...document.querySelectorAll('.geo-filter:checked')].map(c=>c.value);
+
+  filteredData = ALL_EXECUTIVES.filter(e => {
+    const titleLow  = e.title.toLowerCase();
+    const roleMatch = roles.length === 0 || roles.some(r => titleMatchesRole(titleLow, r));
+    const indMatch  = industries.length === 0 || industries.some(ind => e.industry.toLowerCase().includes(ind.toLowerCase()));
+    const sizeMatch = sizes.length === 0 || sizes.includes(e.size);
+    const geoMatch  = geos.length === 0 || geos.includes(e.geo);
+    return roleMatch && indMatch && sizeMatch && geoMatch;
+  });
+
+  renderCards();
+  const msg = filteredData.length === 0
+    ? `No executives found for current filters — try adjusting roles, industries or size`
+    : `Filters applied — ${filteredData.length} executive(s) found`;
+  showToast(msg, filteredData.length > 0);
+}
+
+function resetFilters() {
+  roleTags     = ['CIO', 'CTO', 'IT Director'];
+  industryTags = ['Healthcare', 'Pharma'];
+  renderRoleTags();
+  renderIndustryTags();
+  document.querySelectorAll('.size-filter').forEach(c  => { c.checked = ['Enterprise','Large Enterprise'].includes(c.value); });
+  document.querySelectorAll('.geo-filter').forEach(c   => { c.checked = true; });
+  document.getElementById('solutionSelect').value = 'IBP';
+  document.getElementById('styleSelect').value = 'Professional & Direct';
+  applyFilters();
+}
+
+function renderCards() {
+  const q    = document.getElementById('searchInput').value.toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+
+  let data = filteredData.filter(e =>
+    !q ||
+    e.name.toLowerCase().includes(q) ||
+    e.company.toLowerCase().includes(q) ||
+    e.title.toLowerCase().includes(q) ||
+    e.location.toLowerCase().includes(q)
+  );
+
+  data.sort((a,b) => {
+    if (sort==='company') return a.company.localeCompare(b.company);
+    if (sort==='role')    return a.title.localeCompare(b.title);
+    if (sort==='geo')     return a.geo.localeCompare(b.geo);
+    return a.name.localeCompare(b.name);
+  });
+
+  const grid = document.getElementById('execGrid');
+  const empty = document.getElementById('emptyState');
+
+  if (data.length === 0) { grid.innerHTML=''; empty.style.display='block'; }
+  else { empty.style.display='none'; }
+
+  grid.innerHTML = data.map(e => `
+    <div class="exec-card ${selectedIds.has(e.id)?'selected':''} ${sentIds.has(e.id)?'sent':''}"
+         id="card-${e.id}" onclick="toggleSelect(${e.id}, event)">
+      <span class="sent-badge">✓ SENT</span>
+      <div class="card-top">
+        <div class="avatar">${e.name.split(' ').filter(w=>w&&!/^(Dr\.?|Prof\.?)$/.test(w)).slice(0,2).map(w=>w[0]).join('')}</div>
+        <div class="card-info">
+          <div class="card-name">${e.name}</div>
+          <div class="card-title">${e.title}</div>
+          <div class="card-company">🏢 ${e.company}</div>
+          <div class="card-location">📍 ${e.location}</div>
+        </div>
+        <input type="checkbox" class="card-checkbox" ${selectedIds.has(e.id)?'checked':''} onclick="event.stopPropagation(); toggleSelect(${e.id}, event)" />
+      </div>
+      <div class="card-tags">
+        <span class="tag industry">${e.industry}</span>
+        <span class="tag size">${e.size}</span>
+        <span class="tag geo">${e.geo}</span>
+        <span class="tag role">${e.title.split(/[\/,]/)[0].trim()}</span>
+      </div>
+      <div class="card-actions">
+        <button class="btn-view" onclick="event.stopPropagation(); openProfilePanel(${e.id})">👁 View</button>
+        <button class="btn-msg"  onclick="event.stopPropagation(); openMsg(${e.id})">✉ Message</button>
+        <button class="btn-send ${sentIds.has(e.id)?'sent':queueIds.has(e.id)?'sent':''}"
+          onclick="event.stopPropagation(); ${sentIds.has(e.id)||queueIds.has(e.id) ? '' : currentMode==='manual' ? `openManualGuide(${e.id})` : `addToQueue(${e.id})`}">
+          ${sentIds.has(e.id) ? '✅ Sent' : queueIds.has(e.id) ? '📋 Queued' : '📨 Send'}
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  updateStats(data.length);
+}
+
+// ═══════════════════════════════════════════════════════
+//  SELECTION
+// ═══════════════════════════════════════════════════════
+function toggleSelect(id, event) {
+  if (event && event.target.classList.contains('btn-view')) return;
+  if (event && event.target.classList.contains('btn-msg'))  return;
+  if (event && event.target.classList.contains('btn-send')) return;
+  selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
+  renderCards();
+}
+
+function selectAll() {
+  filteredData.forEach(e => selectedIds.add(e.id));
+  renderCards();
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  renderCards();
+}
+
+function updateStats(showing) {
+  document.getElementById('totalBadge').textContent   = ALL_EXECUTIVES.length + ' Executives';
+  document.getElementById('sentBadge').textContent    = sentIds.size + ' Sent';
+  document.getElementById('showingChip').textContent  = 'Showing ' + showing;
+  document.getElementById('selectedChip').textContent = selectedIds.size + ' Selected';
+  document.getElementById('selCount').textContent     = selectedIds.size;
+  document.getElementById('bulkBtn').disabled         = selectedIds.size === 0;
+}
+
+// ═══════════════════════════════════════════════════════
+//  MESSAGE MODAL
+// ═══════════════════════════════════════════════════════
+function openMsg(id) {
+  currentExec = ALL_EXECUTIVES.find(e=>e.id===id);
+  currentTab  = 'connection';
+  document.querySelectorAll('.msg-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.msg-tab').classList.add('active');
+  const initials = currentExec.name.split(' ').filter(w=>w&&!/^(Dr\.?|Prof\.?)$/.test(w)).slice(0,2).map(w=>w[0]).join('');
+  document.getElementById('modalAvatar').textContent = initials;
+  document.getElementById('modalName').textContent   = currentExec.name;
+  document.getElementById('modalRole').textContent   = currentExec.title + ' · ' + currentExec.company;
+  refreshMessage();
+  // Update send button label based on mode
+  const sendBtn = document.getElementById('modalSendBtn');
+  if (sendBtn) sendBtn.textContent = currentMode === 'manual' ? '📖 Review & Send →' : '📨 Add to Queue';
+  document.getElementById('msgModal').classList.add('open');
+}
+
+function switchTab(btn, type) {
+  currentTab = type;
+  document.querySelectorAll('.msg-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const limits = { connection:300, followup1:0, followup2:0, cta:0, inmail:0 };
+  document.getElementById('charCount').textContent = `0 / ${limits[type]||'∞'} chars`;
+  document.getElementById('msgHint').textContent   = type==='connection'
+    ? 'Connection notes are limited to 300 characters on LinkedIn.'
+    : type==='inmail' ? 'InMails have higher character limits and can reach non-connections.'
+    : 'Send as a direct message after connecting.';
+  refreshMessage();
+}
+
+function refreshMessage() {
+  if (!currentExec) return;
+  const msg = generateMessage(currentExec, currentTab);
+  document.getElementById('msgTextarea').value = msg;
+  updateCharCount();
+  // Show/hide master message banner
+  const banner = document.getElementById('masterMsgBanner');
+  if (banner) banner.style.display = (getMasterMsg() && currentTab === 'connection') ? 'flex' : 'none';
+}
+
+function updateCharCount() {
+  const len = document.getElementById('msgTextarea').value.length;
+  const el  = document.getElementById('charCount');
+  if (currentTab === 'connection') {
+    el.textContent = `${len} / 300 chars`;
+    el.className   = 'char-counter' + (len>300?' over':'');
+  } else {
+    el.textContent = `${len} chars`;
+    el.className   = 'char-counter';
+  }
+}
+
+function copyMessage() {
+  navigator.clipboard.writeText(document.getElementById('msgTextarea').value)
+    .then(()=>showToast('Message copied to clipboard!', true));
+}
+
+function sendFromModal() {
+  if (!currentExec) return;
+
+  if (currentMode === 'manual') {
+    // Manual mode → open step-by-step guide with current message pre-filled
+    const msg = document.getElementById('msgTextarea').value;
+    closeModal();
+    // Pre-fill guide with the edited message
+    _openManualGuideWithMsg(currentExec.id, msg);
+  } else {
+    // Claude mode → add to send queue
+    const msg = document.getElementById('msgTextarea').value;
+    const id  = currentExec.id;
+    if (!queueIds.has(id) && !sentIds.has(id)) {
+      sendQueue.push({ id, name:currentExec.name, title:currentExec.title, company:currentExec.company, linkedIn:currentExec.linkedIn, message:msg, status:'pending' });
+      queueIds.add(id);
+      document.getElementById('queuePanel').classList.add('open');
+      renderQueue();
+    }
+    closeModal();
+    renderCards();
+    showToast(`📋 ${currentExec.name} added to send queue`, true);
+  }
+}
+
+// Internal helper — open guide with a specific pre-built message
+async function _openManualGuideWithMsg(id, prefilledMsg) {
+  guideExecId = id;
+  const exec = ALL_EXECUTIVES.find(e=>e.id===id);
+  if (!exec) return;
+
+  const inits = exec.name.split(' ').filter(w=>w&&!/^(Dr\.?|Prof\.?)$/.test(w)).slice(0,2).map(w=>w[0]).join('');
+  document.getElementById('guideExecInfo').style.display = 'flex';
+  document.getElementById('guideAvatar').textContent  = inits;
+  document.getElementById('guideName').textContent    = exec.name;
+  document.getElementById('guideRole').textContent    = exec.title + ' · ' + exec.company;
+  document.getElementById('guideLinkedInBtn').onclick = () => window.open(exec.linkedIn, '_blank');
+  document.getElementById('guideMsg').textContent     = prefilledMsg || await generateMessageAI(exec, 'connection');
+  document.getElementById('guideCopied').style.display = 'none';
+
+  // Add to queue if not already
+  if (!queueIds.has(id) && !sentIds.has(id)) {
+    sendQueue.push({ id, name:exec.name, title:exec.title, company:exec.company, linkedIn:exec.linkedIn, message:prefilledMsg||'', status:'pending' });
+    queueIds.add(id);
+    renderQueue();
+    renderCards();
+  }
+  document.getElementById('manualGuideModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('msgModal').classList.remove('open'); }
+
+function quickSend(id) { addToQueue(id); }
+
+// ═══════════════════════════════════════════════════════
+//  SEND QUEUE
+// ═══════════════════════════════════════════════════════
+function addToQueue(id) {
+  if (queueIds.has(id)) { showToast('Already in queue', false); return; }
+  if (sentIds.has(id))  { showToast('Already sent', false); return; }
+  const exec = ALL_EXECUTIVES.find(e=>e.id===id);
+  if (!exec) return;
+  const msg = generateMessage(exec, 'connection');
+  sendQueue.push({ id, name: exec.name, title: exec.title, company: exec.company, linkedIn: exec.linkedIn, message: msg, status: 'pending' });
+  queueIds.add(id);
+  renderQueue();
+  renderCards();
+  // Auto-open queue panel
+  document.getElementById('queuePanel').classList.add('open');
+  showToast(`📋 ${exec.name} added to send queue`, true);
+}
+
+function addAllSelectedToQueue() {
+  let added = 0;
+  selectedIds.forEach(id => {
+    if (!queueIds.has(id) && !sentIds.has(id)) { addToQueue(id); added++; }
+  });
+  selectedIds.clear();
+  renderCards();
+  if (added > 0) showToast(`📋 ${added} executive(s) added to queue`, true);
+}
+
+// ── BULK SEND MODAL ──────────────────────────────────────
+function openBulkSendModal() {
+  // 1. Collect targets (selected, not yet sent/queued)
+  const targets = [];
+  selectedIds.forEach(id => {
+    const exec = ALL_EXECUTIVES.find(e => e.id === id);
+    if (exec && !sentIds.has(id)) targets.push(exec);
+  });
+  // Also include already-queued pending items if nothing selected
+  if (targets.length === 0 && sendQueue.length > 0) {
+    sendQueue.filter(e => e.status === 'pending').forEach(qi => {
+      const exec = ALL_EXECUTIVES.find(e => e.id === qi.id);
+      if (exec) targets.push(exec);
+    });
+  }
+  if (targets.length === 0) {
+    showToast('Select executives first using "☑ Select All" or the checkboxes', false);
+    return;
+  }
+
+  // 2. Queue all targets (generates messages via master/template/style)
+  targets.forEach(exec => {
+    if (!queueIds.has(exec.id) && !sentIds.has(exec.id)) addToQueue(exec.id);
+  });
+  selectedIds.clear();
+  renderCards();
+
+  // 3. Build the pending queue list for display
+  const pending = sendQueue.filter(e => e.status === 'pending');
+  const dailyLeft = LI_LIMITS.daily - (parseInt(localStorage.getItem('cbc_d_inv')||'0'));
+
+  // Stats
+  document.getElementById('bsSummary').innerHTML = `
+    <div class="bs-stat"><div class="bs-stat-num">${pending.length}</div><div class="bs-stat-label">Ready to Send</div></div>
+    <div class="bs-stat" style="background:${dailyLeft<pending.length?'#fef3c7':'var(--green-light)'}">
+      <div class="bs-stat-num" style="color:${dailyLeft<pending.length?'var(--orange)':'var(--green)'}">${dailyLeft}</div>
+      <div class="bs-stat-label">Daily Slots Left</div>
+    </div>
+    <div class="bs-stat" style="background:#f3e8ff">
+      <div class="bs-stat-num" style="color:#7c3aed">${getMasterMsg() ? '✅' : '—'}</div>
+      <div class="bs-stat-label">Master Message</div>
+    </div>
+    <div class="bs-stat">
+      <div class="bs-stat-num" style="font-size:13pt">${currentMode === 'claude' ? '🤖' : '👤'}</div>
+      <div class="bs-stat-label">${currentMode === 'claude' ? 'Claude Mode' : 'Manual Mode'}</div>
+    </div>
+  `;
+
+  // Limit warning
+  const warnEl = document.getElementById('bsLimitWarn');
+  if (dailyLeft < pending.length) {
+    document.getElementById('bsLimitWarnText').textContent =
+      `You have ${dailyLeft} invite slot${dailyLeft!==1?'s':''} left today but ${pending.length} are queued. Only the first ${dailyLeft} will be sent.`;
+    warnEl.classList.remove('hide');
+  } else {
+    warnEl.classList.add('hide');
+  }
+
+  // Exec list
+  document.getElementById('bsExecList').innerHTML = pending.map((qi, i) => `
+    <div class="bs-exec-row">
+      <div class="bs-exec-num">${i + 1}</div>
+      <div class="bs-exec-info">
+        <div class="bs-exec-name">${qi.name} &nbsp;<span style="font-size:8pt;color:var(--muted)">${qi.company}</span></div>
+        <div class="bs-exec-meta">${qi.title}</div>
+        <div class="bs-exec-msg">${qi.message}</div>
+      </div>
+      <a href="${qi.linkedIn}" target="_blank"
+        style="font-size:8pt;color:var(--blue);white-space:nowrap;align-self:center;text-decoration:none;border:1px solid var(--border);border-radius:4px;padding:2px 7px">
+        🔗 Profile
+      </a>
+    </div>
+  `).join('') || '<div style="padding:18px;text-align:center;color:var(--muted)">Nothing pending.</div>';
+
+  // Reset Step 1 done state
+  const s1 = document.getElementById('bsStep1');
+  if (s1) { s1.classList.remove('done'); s1.querySelector('.auto-step-num').textContent = '1'; }
+
+  document.getElementById('bulkSendModal').classList.add('open');
+}
+
+function bulkSendClaude() {
+  exportQueueFile();
+}
+
+function bulkSendManual() {
+  exportQueueFile();
+}
+
+// Export the pending queue as outreach_queue.json (user saves it to Marketing Agents folder)
+function exportQueueFile() {
+  const pending = sendQueue.filter(e => e.status === 'pending');
+  if (!pending.length) { showToast('Nothing pending in the queue', false); return; }
+
+  const payload = {
+    exportedAt:   new Date().toISOString(),
+    sender:       document.getElementById('senderName').value  || 'Suchithra',
+    senderTitle:  document.getElementById('senderTitle').value || 'Business Development, CBC',
+    totalCount:   pending.length,
+    executives: pending.map((e, i) => ({
+      index:    i + 1,
+      id:       e.id,
+      name:     e.name,
+      title:    e.title,
+      company:  e.company,
+      linkedIn: e.linkedIn,
+      message:  e.message.slice(0, 300)   // LinkedIn 300-char limit
+    }))
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'outreach_queue.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Mark Step 1 done visually
+  const s1 = document.getElementById('bsStep1');
+  if (s1) { s1.classList.add('done'); s1.querySelector('.auto-step-num').textContent = '✓'; }
+
+  showToast(`✅ outreach_queue.json saved — now follow Steps 2 & 3`, true);
+}
+
+// "Send All Now" from queue panel header
+function sendAllFromQueue() {
+  if (sendQueue.filter(e=>e.status==='pending').length === 0) {
+    showToast('Queue is empty — add executives first', false);
+    return;
+  }
+  // Rebuild selected from queue pending items and open bulk modal
+  sendQueue.filter(e=>e.status==='pending').forEach(qi => selectedIds.add(qi.id));
+  openBulkSendModal();
+}
+
+function removeFromQueue(id) {
+  sendQueue = sendQueue.filter(e => e.id !== id);
+  queueIds.delete(id);
+  renderQueue();
+  renderCards();
+}
+
+function clearQueue() {
+  sendQueue = [];
+  queueIds.clear();
+  renderQueue();
+  renderCards();
+  showToast('Queue cleared', false);
+}
+
+function toggleQueuePanel() {
+  document.getElementById('queuePanel').classList.toggle('open');
+}
+
+function renderQueue() {
+  const tbody = document.getElementById('queueTableBody');
+  const count = sendQueue.length;
+  document.getElementById('queueCount').textContent = count;
+  document.getElementById('queueBadge').textContent = count;
+
+  if (count === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px;font-style:italic">No executives queued yet. Click 📨 Queue on any card.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = sendQueue.map(e => `
+    <tr id="qrow-${e.id}">
+      <td><strong>${e.name}</strong></td>
+      <td style="font-size:8.5pt">${e.title}<br><span style="color:var(--muted)">${e.company}</span></td>
+      <td><div class="queue-msg-preview">${e.message}</div></td>
+      <td><span class="queue-status ${e.status}">${e.status==='pending'?'Queued':e.status==='sending'?'Sending…':e.status==='done'?'✓ Sent':'✗ Failed'}</span></td>
+      <td>
+        <button class="queue-remove" onclick="removeFromQueue(${e.id})" title="Remove from queue">✕</button>
+        <button onclick="openMsg(${e.id})" style="font-size:8pt;padding:2px 7px;margin-left:4px;border:1px solid var(--border);border-radius:4px;background:#fff;cursor:pointer;" title="Edit message">✏</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function copyQueueForClaude() {
+  if (sendQueue.length === 0) { showToast('⚠ Queue is empty — add executives first', false); return; }
+  const style  = document.getElementById('styleSelect').value;
+  const sender = document.getElementById('senderName').value || 'Suchithra';
+
+  const header = `LINKEDIN_SEND_QUEUE\nSender: ${sender} | Style: ${style} | Count: ${sendQueue.length}\n---`;
+  const items  = sendQueue
+    .filter(e => e.status === 'pending')
+    .map((e,i) =>
+      `[${i+1}] Name: ${e.name} | Title: ${e.title} at ${e.company} | Profile: ${e.linkedIn} | Message: ${e.message}`
+    ).join('\n');
+  const footer = `---\nProcess this queue: navigate to each LinkedIn profile, send a connection request with the exact message provided.`;
+
+  const text = [header, items, footer].join('\n\n');
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✅ Queue copied! Paste it in the chat → I will send each request automatically.', true);
+  });
+}
+
+// Mark an exec as sent from external automation
+function markQueueItemSent(id) {
+  const item = sendQueue.find(e => e.id === id);
+  if (item) item.status = 'done';
+  sentIds.add(id);
+  renderQueue();
+  renderCards();
+}
+
+// ═══════════════════════════════════════════════════════
+//  LEGACY — kept for compatibility
+// ═══════════════════════════════════════════════════════
+function openBulkModal()  { document.getElementById('queuePanel').classList.add('open'); }
+function closeBulkModal() {}
+function copyAllMessages() {
+  const text = sendQueue.map(e=>`--- ${e.name} (${e.company}) ---\n${e.message}`).join('\n\n');
+  navigator.clipboard.writeText(text).then(()=>showToast('All messages copied!', true));
+}
+function markAllSent() {
+  sendQueue.forEach(e => { e.status='done'; sentIds.add(e.id); });
+  queueIds.clear(); sendQueue=[];
+  renderQueue(); renderCards();
+  showToast('All marked as sent', true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  EXPORT CSV
+// ═══════════════════════════════════════════════════════
+function exportCSV() {
+  const headers = ['Name','Title','Company','Location','Industry','Size','Geography','Status','LinkedIn','Connection Message'];
+  const rows = filteredData.map(e=>[
+    e.name, e.title, e.company, e.location, e.industry, e.size, e.geo,
+    sentIds.has(e.id)?'Sent':selectedIds.has(e.id)?'Selected':'Not Contacted',
+    e.linkedIn,
+    '"'+generateMessage(e,'connection').replace(/"/g,"''")+'"'
+  ]);
+  const csv = [headers, ...rows].map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'CBC_LinkedIn_Outreach_List.csv';
+  a.click();
+  showToast('CSV exported!', true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+function showToast(msg, green=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast show' + (green?' green':'');
+  setTimeout(()=>{ t.className='toast'; }, 3200);
+}
+
+// ═══════════════════════════════════════════════════════
+//  ADD EXECUTIVE
+// ═══════════════════════════════════════════════════════
+function openAddExec() {
+  ['addUrl','addName','addTitle','addCompany','addLocation'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('addExecModal').classList.add('open');
+}
+function closeAddExec() { document.getElementById('addExecModal').classList.remove('open'); }
+
+function saveNewExec() {
+  const url  = document.getElementById('addUrl').value.trim();
+  const name = document.getElementById('addName').value.trim();
+  const title= document.getElementById('addTitle').value.trim();
+  if (!url || !name || !title) { showToast('⚠ Please fill in URL, Name and Title', false); return; }
+
+  // Validate it's a real LinkedIn /in/ URL
+  if (!url.includes('linkedin.com/in/')) {
+    showToast('⚠ Please enter a valid linkedin.com/in/ profile URL', false); return;
+  }
+
+  const newExec = {
+    id: ALL_EXECUTIVES.length + 1,
+    name,
+    title,
+    company : document.getElementById('addCompany').value.trim()  || 'Not specified',
+    location: document.getElementById('addLocation').value.trim() || 'Not specified',
+    industry: document.getElementById('addIndustry').value,
+    size    : document.getElementById('addSize').value,
+    geo     : document.getElementById('addGeo').value,
+    linkedIn: url.startsWith('http') ? url : 'https://' + url,
+  };
+
+  ALL_EXECUTIVES.push(newExec);
+  closeAddExec();
+  applyFilters();
+  showToast(`✓ ${name} added to dashboard`, true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODE SYSTEM  (claude | manual)
+// ═══════════════════════════════════════════════════════
+let currentMode = localStorage.getItem('cbc_mode') || 'claude';
+
+function setMode(mode) {
+  currentMode = mode;
+  localStorage.setItem('cbc_mode', mode);
+
+  // Toggle buttons
+  document.getElementById('btnClaude').classList.toggle('active', mode==='claude');
+  document.getElementById('btnManual').classList.toggle('active', mode==='manual');
+
+  // Banners
+  document.getElementById('claudeBanner').classList.toggle('show', mode==='claude');
+  document.getElementById('manualBanner').classList.toggle('show', mode==='manual');
+
+  // Top sub-text
+  document.getElementById('topbarSub').textContent =
+    mode==='claude'
+      ? '🤖 Claude Mode — Automated  |  cbcinc.ai'
+      : '👤 Manual Mode — Copy & Send  |  cbcinc.ai';
+
+  // AI Setup button
+  document.getElementById('apiConfigBtn').style.display = mode==='manual' ? '' : 'none';
+
+  // AI Provider section in sidebar
+  document.getElementById('aiProviderSection').classList.toggle('show', mode==='manual');
+
+  // Queue action button label
+  const qBtn = document.getElementById('queueActionBtn');
+  if (qBtn) qBtn.textContent = mode==='claude'
+    ? '📋 Copy Queue for Claude → Paste in Chat'
+    : '📖 Start Manual Send Walkthrough';
+
+  // Card send buttons relabel
+  renderCards();
+}
+
+function queueMainAction() {
+  if (currentMode==='claude') {
+    copyQueueForClaude();
+  } else {
+    // Open guide for first pending item
+    const first = sendQueue.find(e=>e.status==='pending');
+    if (!first) { showToast('Queue is empty — add executives first', false); return; }
+    openManualGuide(first.id);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  AI PROVIDER SYSTEM
+// ═══════════════════════════════════════════════════════
+let aiProvider = localStorage.getItem('cbc_ai_provider') || 'template';
+
+function switchProvider(p) {
+  aiProvider = p;
+  localStorage.setItem('cbc_ai_provider', p);
+  ['template','openai','gemini','ollama'].forEach(x => {
+    document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1))?.classList.toggle('active', x===p);
+    document.getElementById('pane'+x.charAt(0).toUpperCase()+x.slice(1))?.classList.toggle('show', x===p);
+  });
+}
+
+function openApiConfig() {
+  document.getElementById('aiProviderSection').classList.add('show');
+  document.querySelector('.sidebar').scrollTop = 9999;
+  showToast('AI provider settings are in the left sidebar — scroll down', false);
+}
+
+async function generateMessageAI(exec, type) {
+  const baseMsg = generateMessage(exec, type);  // Always have fallback
+
+  if (aiProvider === 'template' || currentMode === 'claude') return baseMsg;
+
+  const prompt = `You are a B2B sales assistant for CBC (cbcinc.ai), an AI-powered enterprise planning platform.
+Write a LinkedIn connection request note (max 280 characters) for:
+- Recipient: ${exec.name}, ${exec.title} at ${exec.company} in ${exec.location}
+- Industry: ${exec.industry}
+- CBC Solution to pitch: ${document.getElementById('solutionSelect').value}
+- Sender: ${document.getElementById('senderName').value}, ${document.getElementById('senderTitle').value}
+- Tone: ${document.getElementById('styleSelect').value}
+Be concise, personalised, professional. No hashtags. Output ONLY the message text.`;
+
+  try {
+    if (aiProvider === 'openai') {
+      const key   = document.getElementById('openaiKey').value.trim();
+      const model = document.getElementById('openaiModel').value;
+      if (!key) return baseMsg;
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body: JSON.stringify({ model, messages:[{role:'user',content:prompt}], max_tokens:120, temperature:0.7 })
+      });
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content?.trim() || baseMsg;
+    }
+    if (aiProvider === 'gemini') {
+      const key   = document.getElementById('geminiKey').value.trim();
+      const model = document.getElementById('geminiModel').value;
+      if (!key) return baseMsg;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:120,temperature:0.7} })
+      });
+      const data = await res.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || baseMsg;
+    }
+    if (aiProvider === 'ollama') {
+      const url   = (document.getElementById('ollamaUrl').value.trim() || 'http://localhost:11434');
+      const model = document.getElementById('ollamaModel').value;
+      const res = await fetch(`${url}/api/generate`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ model, prompt, stream:false, options:{num_predict:120} })
+      });
+      const data = await res.json();
+      return data.response?.trim() || baseMsg;
+    }
+  } catch(e) {
+    console.warn('AI provider error:', e);
+  }
+  return baseMsg;
+}
+
+async function testProvider(p) {
+  const statusId = p+'Status';
+  document.getElementById(statusId).textContent = '⏳ Testing…';
+  document.getElementById(statusId).className = 'api-status';
+  try {
+    let ok = false;
+    if (p==='openai') {
+      const key = document.getElementById('openaiKey').value.trim();
+      const r = await fetch('https://api.openai.com/v1/models',{headers:{'Authorization':'Bearer '+key}});
+      ok = r.ok;
+    }
+    if (p==='gemini') {
+      const key   = document.getElementById('geminiKey').value.trim();
+      const model = document.getElementById('geminiModel').value;
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+        {method:'POST',headers:{'Content-Type':'application/json'},
+         body:JSON.stringify({contents:[{parts:[{text:'hi'}]}],generationConfig:{maxOutputTokens:5}})});
+      ok = r.ok;
+    }
+    if (p==='ollama') {
+      const url = document.getElementById('ollamaUrl').value.trim() || 'http://localhost:11434';
+      const r = await fetch(`${url}/api/tags`);
+      ok = r.ok;
+    }
+    document.getElementById(statusId).textContent = ok ? '✅ Connected successfully' : '❌ Connection failed';
+    document.getElementById(statusId).className = 'api-status '+(ok?'ok':'fail');
+  } catch(e) {
+    document.getElementById(statusId).textContent = '❌ Error: '+e.message;
+    document.getElementById(statusId).className = 'api-status fail';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  MANUAL GUIDE
+// ═══════════════════════════════════════════════════════
+let guideExecId = null;
+
+async function openManualGuide(id) {
+  // If no id, use first pending queue item
+  if (id === null) {
+    const first = sendQueue.find(e=>e.status==='pending');
+    if (!first) { showToast('Add executives to the queue first', false); return; }
+    id = first.id;
+  }
+  guideExecId = id;
+  const exec = ALL_EXECUTIVES.find(e=>e.id===id);
+  if (!exec) return;
+
+  const inits = exec.name.split(' ').filter(w=>w&&!/^(Dr\.?|Prof\.?)$/.test(w)).slice(0,2).map(w=>w[0]).join('');
+  document.getElementById('guideExecInfo').style.display = 'flex';
+  document.getElementById('guideAvatar').textContent  = inits;
+  document.getElementById('guideName').textContent    = exec.name;
+  document.getElementById('guideRole').textContent    = exec.title + ' · ' + exec.company;
+  document.getElementById('guideLinkedInBtn').onclick = () => window.open(exec.linkedIn, '_blank');
+
+  // Generate message (AI or template)
+  document.getElementById('guideMsg').textContent = '⏳ Generating message…';
+  document.getElementById('manualGuideModal').classList.add('open');
+
+  const msg = await generateMessageAI(exec, 'connection');
+  document.getElementById('guideMsg').textContent = msg;
+
+  // Also update queue item message
+  const qi = sendQueue.find(e=>e.id===id);
+  if (qi) qi.message = msg;
+  document.getElementById('guideCopied').style.display = 'none';
+}
+
+function copyGuideMsg() {
+  const msg = document.getElementById('guideMsg').textContent;
+  navigator.clipboard.writeText(msg).then(() => {
+    document.getElementById('guideCopied').style.display = 'inline';
+    setTimeout(()=>{ document.getElementById('guideCopied').style.display='none'; }, 2500);
+  });
+}
+
+function openGuideLinkedIn() {
+  const exec = ALL_EXECUTIVES.find(e=>e.id===guideExecId);
+  if (exec) window.open(exec.linkedIn, '_blank');
+}
+
+function markGuideSent() {
+  if (guideExecId) {
+    markQueueItemSent(guideExecId);
+    showToast('✅ Marked as sent!', true);
+    closeManualGuide();
+    // Auto-open next pending item
+    setTimeout(()=>{
+      const next = sendQueue.find(e=>e.status==='pending');
+      if (next) {
+        if (confirm(`Next: ${next.name} — open guide now?`)) openManualGuide(next.id);
+      }
+    }, 600);
+  }
+}
+
+function closeManualGuide() {
+  document.getElementById('manualGuideModal').classList.remove('open');
+  guideExecId = null;
+}
+
+// Patch card Queue button to open guide in manual mode
+const _base_addToQueue = addToQueue;
+// (already patched by campaign override above — we handle in renderCards instead via btn label)
+
+// ═══════════════════════════════════════════════════════
+//  LINKEDIN LIMITS TRACKER
+// ═══════════════════════════════════════════════════════
+const LI_LIMITS = { daily: 25, weekly: 100, monthly: 400, dailyMsg: 50 };
+
+function getTodayKey()  { return new Date().toISOString().slice(0,10); }
+function getWeekKey()   { const d=new Date(); return d.getFullYear()+'-W'+Math.ceil((d.getDate()+(new Date(d.getFullYear(),d.getMonth(),1).getDay()))/7); }
+function getMonthKey()  { return new Date().toISOString().slice(0,7); }
+
+function loadUsage() {
+  let u = JSON.parse(localStorage.getItem('cbc_li_usage')||'{}');
+  const today=getTodayKey(), week=getWeekKey(), month=getMonthKey();
+  if (u.dayKey   !== today) { u.dayKey=today;   u.dailyInvites=0; u.dailyMsg=0; }
+  if (u.weekKey  !== week)  { u.weekKey=week;   u.weeklyInvites=0; }
+  if (u.monthKey !== month) { u.monthKey=month; u.monthlyInvites=0; }
+  return u;
+}
+function saveUsage(u) { localStorage.setItem('cbc_li_usage', JSON.stringify(u)); }
+
+function incrementInvite() {
+  const u = loadUsage();
+  u.dailyInvites   = (u.dailyInvites  ||0)+1;
+  u.weeklyInvites  = (u.weeklyInvites ||0)+1;
+  u.monthlyInvites = (u.monthlyInvites||0)+1;
+  saveUsage(u); updateLimitsBar();
+  if (u.dailyInvites >= LI_LIMITS.daily) {
+    showToast(`⚠️ Daily invite limit reached (${LI_LIMITS.daily}/day). Resume tomorrow.`, false);
+    return false;
+  }
+  return true;
+}
+
+function incrementMessage() {
+  const u = loadUsage();
+  u.dailyMsg = (u.dailyMsg||0)+1;
+  saveUsage(u); updateLimitsBar();
+}
+
+function canSendInvite() {
+  const u = loadUsage();
+  return (u.dailyInvites||0) < LI_LIMITS.daily && (u.weeklyInvites||0) < LI_LIMITS.weekly;
+}
+
+function updateLimitsBar() {
+  const u = loadUsage();
+  const d  = u.dailyInvites  ||0;
+  const w  = u.weeklyInvites ||0;
+  const mo = u.monthlyInvites||0;
+  const ms = u.dailyMsg      ||0;
+
+  function setMeter(fillId, countId, val, max) {
+    const pct = Math.min(100, (val/max)*100);
+    const cls = pct>=100?'danger':pct>=80?'warn':'safe';
+    document.getElementById(fillId).style.width = pct+'%';
+    document.getElementById(fillId).className   = 'limit-fill '+cls;
+    const el = document.getElementById(countId);
+    el.textContent = val+' / '+max;
+    el.className   = 'limit-count '+(pct>=80?cls:'');
+  }
+
+  setMeter('inviteFill','inviteCount', d,  LI_LIMITS.daily);
+  setMeter('weekFill',  'weekCount',   w,  LI_LIMITS.weekly);
+  setMeter('monthFill', 'monthCount',  mo, LI_LIMITS.monthly);
+  setMeter('msgFill',   'msgCount',    ms, LI_LIMITS.dailyMsg);
+}
+
+function resetLimits() {
+  localStorage.removeItem('cbc_li_usage');
+  updateLimitsBar();
+  showToast('Counters reset', false);
+}
+
+function goWithdrawInvites() {
+  showToast('Opening LinkedIn Invitation Manager…', false);
+  window.open('https://www.linkedin.com/mynetwork/invitation-manager/sent/', '_blank');
+  // Claude automation instructions tooltip
+  setTimeout(()=>{
+    showToast('📋 Paste in chat: "Withdraw all invites older than 15 days from my LinkedIn sent list"', false);
+  }, 2500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  PROFILE PANEL
+// ═══════════════════════════════════════════════════════
+function openProfilePanel(id) {
+  const e = ALL_EXECUTIVES.find(x=>x.id===id);
+  if (!e) return;
+  const initials = e.name.split(' ').filter(w=>w&&!/^(Dr\.?|Prof\.?)$/.test(w)).slice(0,2).map(w=>w[0]).join('');
+  const camp = campaigns.find(c => c.execIds && c.execIds.includes(id));
+  document.getElementById('profilePanelBody').innerHTML = `
+    <div style="text-align:center;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:14px">
+      <div class="profile-avatar-lg">${initials}</div>
+      <div class="profile-name-lg">${e.name}</div>
+      <div class="profile-title-lg">${e.title}</div>
+      <div class="profile-company-lg">🏢 ${e.company}</div>
+    </div>
+    <div class="profile-detail-row">
+      <span class="profile-detail-icon">📍</span>
+      <div><div class="profile-detail-label">Location</div><div class="profile-detail-text">${e.location}</div></div>
+    </div>
+    <div class="profile-detail-row">
+      <span class="profile-detail-icon">🏭</span>
+      <div><div class="profile-detail-label">Industry</div><div class="profile-detail-text">${e.industry} &nbsp;·&nbsp; ${e.size}</div></div>
+    </div>
+    <div class="profile-detail-row">
+      <span class="profile-detail-icon">🌍</span>
+      <div><div class="profile-detail-label">Geography</div><div class="profile-detail-text">${e.geo}</div></div>
+    </div>
+    <div class="profile-detail-row">
+      <span class="profile-detail-icon">📣</span>
+      <div><div class="profile-detail-label">Campaign</div><div class="profile-detail-text">${camp?camp.name:'<em style="color:var(--muted)">Not assigned</em>'}</div></div>
+    </div>
+    <div class="profile-detail-row">
+      <span class="profile-detail-icon">✉️</span>
+      <div><div class="profile-detail-label">Status</div><div class="profile-detail-text">${sentIds.has(id)?'<span style="color:var(--green);font-weight:bold">✓ Invite Sent</span>':queueIds.has(id)?'<span style="color:var(--orange);font-weight:bold">📋 Queued</span>':'<span style="color:var(--muted)">Not Contacted</span>'}</div></div>
+    </div>
+    <div class="profile-actions-panel">
+      <button class="panel-btn linkedin" onclick="window.open('${e.linkedIn}','_blank')">🔗 Open LinkedIn Profile</button>
+      <button class="panel-btn primary" onclick="openMsg(${id}); closeProfilePanel()">📨 Send</button>
+    </div>
+    <div style="margin-top:14px;padding:10px;background:var(--light-blue);border-radius:6px;font-size:8.5pt;color:var(--muted)">
+      💡 <strong>Note:</strong> LinkedIn blocks profile embedding in iframes. Click "Open LinkedIn Profile" above to view the full profile in a new tab.
+    </div>
+  `;
+  document.getElementById('profilePanel').classList.add('open');
+}
+
+function closeProfilePanel() {
+  document.getElementById('profilePanel').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════
+//  CAMPAIGN SYSTEM
+// ═══════════════════════════════════════════════════════
+let campaigns = JSON.parse(localStorage.getItem('cbc_campaigns')||'[]');
+let activeCampaignId = null;
+
+const CAMPAIGN_COLORS = ['#dbeafe','#dcfce7','#fef9c3','#fce7f3','#f3e8ff','#ffedd5'];
+const CAMPAIGN_ICONS  = ['🎯','🚀','💼','📊','🌟','⚡','🔥','🌐'];
+
+function saveCampaigns() { localStorage.setItem('cbc_campaigns', JSON.stringify(campaigns)); }
+
+function createCampaign() {
+  const name = document.getElementById('campName').value.trim();
+  if (!name) { showToast('⚠ Please enter a campaign name', false); return; }
+  const camp = {
+    id:      Date.now(),
+    name,
+    solution:  document.getElementById('campSolution').value,
+    industry:  document.getElementById('campIndustry').value,
+    role:      document.getElementById('campRole').value.trim(),
+    message:   document.getElementById('campMessage').value.trim(),
+    color:     CAMPAIGN_COLORS[campaigns.length % CAMPAIGN_COLORS.length],
+    icon:      CAMPAIGN_ICONS[campaigns.length  % CAMPAIGN_ICONS.length],
+    execIds:   [],
+    created:   getTodayKey(),
+    stats:     { sent:0, queued:0 }
+  };
+  campaigns.push(camp);
+  saveCampaigns();
+  // Clear form
+  ['campName','campMessage','campRole'].forEach(id=>document.getElementById(id).value='');
+  renderCampaignList();
+  showToast(`✅ Campaign "${name}" created!`, true);
+}
+
+function deleteCampaign(id) {
+  campaigns = campaigns.filter(c=>c.id!==id);
+  if (activeCampaignId===id) activeCampaignId=null;
+  saveCampaigns();
+  renderCampaignList();
+  showToast('Campaign deleted', false);
+}
+
+function assignToCampaign(campId) {
+  const camp = campaigns.find(c=>c.id===campId);
+  if (!camp) return;
+  activeCampaignId = campId;
+  // Apply campaign filters
+  if (camp.industry !== 'All') {
+    industryTags = [camp.industry];
+    renderIndustryTags();
+  }
+  if (camp.role) {
+    roleTags = camp.role.split(',').map(r=>r.trim()).filter(Boolean);
+    renderRoleTags();
+  }
+  document.getElementById('solutionSelect').value = camp.solution;
+  applyFilters();
+  closeCampaignModal();
+  showToast(`🎯 Campaign "${camp.name}" active — filters applied`, true);
+}
+
+function renderCampaignList() {
+  const el = document.getElementById('campaignList');
+  if (!campaigns.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:9pt;font-style:italic">No campaigns yet. Create one below.</p>';
+    return;
+  }
+  el.innerHTML = campaigns.map(c => `
+    <div class="campaign-row ${activeCampaignId===c.id?'active':''}" style="border-color:${activeCampaignId===c.id?'var(--blue)':'var(--border)'}">
+      <span class="campaign-icon">${c.icon}</span>
+      <div style="flex:1">
+        <div class="campaign-name">${c.name}</div>
+        <div class="campaign-meta">${c.industry} · ${c.role||'All roles'} · ${c.solution}</div>
+      </div>
+      <div class="campaign-stat">${c.stats.sent} sent / ${c.stats.queued} queued</div>
+      <button class="modal-btn send" style="flex:0;width:auto;padding:5px 12px;font-size:8pt" onclick="assignToCampaign(${c.id})">Apply</button>
+      <button class="campaign-delete" onclick="deleteCampaign(${c.id})" title="Delete campaign">🗑</button>
+    </div>
+  `).join('');
+}
+
+// Override addToQueue to track campaign stats
+const _origAddToQueue = addToQueue;
+function addToQueue(id) {
+  if (!canSendInvite()) {
+    showToast(`⛔ Daily invite limit reached (${LI_LIMITS.daily}/day). Try again tomorrow.`, false);
+    return;
+  }
+  // Use campaign message template if campaign is active
+  const exec = ALL_EXECUTIVES.find(e=>e.id===id);
+  if (activeCampaignId && exec) {
+    const camp = campaigns.find(c=>c.id===activeCampaignId);
+    if (camp && camp.message) {
+      const sender    = document.getElementById('senderName').value  || 'Suchithra';
+      const sTitle    = document.getElementById('senderTitle').value || 'CBC';
+      const cta       = document.getElementById('ctaLink').value     || 'calendly.com/cbcinc';
+      const firstName = exec.name.split(' ').filter(w=>w&&!/^(Dr\.?|Prof\.?)$/.test(w))[0]||exec.name;
+      const msg = camp.message
+        .replace(/\{firstName\}/g, firstName)
+        .replace(/\{industry\}/g,  exec.industry)
+        .replace(/\{solution\}/g,  camp.solution)
+        .replace(/\{company\}/g,   exec.company)
+        .replace(/\{sender\}/g,    sender)
+        .replace(/\{senderTitle\}/g, sTitle)
+        .replace(/\{cta\}/g,       cta);
+
+      if (queueIds.has(id)) { showToast('Already in queue', false); return; }
+      if (sentIds.has(id))  { showToast('Already sent', false); return; }
+      sendQueue.push({ id, name:exec.name, title:exec.title, company:exec.company, linkedIn:exec.linkedIn, message:msg, status:'pending', campaignId:activeCampaignId });
+      queueIds.add(id);
+      if (!camp.execIds.includes(id)) camp.execIds.push(id);
+      camp.stats.queued = (camp.stats.queued||0)+1;
+      saveCampaigns();
+      renderQueue(); renderCards();
+      document.getElementById('queuePanel').classList.add('open');
+      showToast(`📋 ${exec.name} added to queue (Campaign: ${camp.name})`, true);
+      return;
+    }
+  }
+  _origAddToQueue(id);
+}
+
+// Override markQueueItemSent to also increment usage counter
+const _origMarkSent = markQueueItemSent;
+function markQueueItemSent(id) {
+  _origMarkSent(id);
+  incrementInvite();
+  // Update campaign stats
+  const qi = sendQueue.find(e=>e.id===id);
+  if (qi && qi.campaignId) {
+    const camp = campaigns.find(c=>c.id===qi.campaignId);
+    if (camp) { camp.stats.sent=(camp.stats.sent||0)+1; saveCampaigns(); }
+  }
+}
+
+function openCampaignModal() {
+  renderCampaignList();
+  document.getElementById('campaignModal').classList.add('open');
+}
+function closeCampaignModal() {
+  document.getElementById('campaignModal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════
+//  SAVED SEARCHES
+// ═══════════════════════════════════════════════════════
+let savedSearches = JSON.parse(localStorage.getItem('cbc_saved_searches') || '[]');
+
+function captureCurrrentFilters() {
+  return {
+    roles      : [...roleTags],
+    industries : [...industryTags],
+    sizes      : [...document.querySelectorAll('.size-filter:checked')].map(c=>c.value),
+    geos       : [...document.querySelectorAll('.geo-filter:checked')].map(c=>c.value),
+    solution   : document.getElementById('solutionSelect').value,
+    style      : document.getElementById('styleSelect').value,
+    mode       : currentMode,
+  };
+}
+
+function openSaveSearchModal() {
+  const f = captureCurrrentFilters();
+  document.getElementById('saveSearchName').value = '';
+
+  // Build preview
+  document.getElementById('saveSearchPreview').innerHTML = `
+    <div style="font-size:8.5pt;color:var(--text);line-height:1.8">
+      <div><strong style="color:var(--navy)">Roles:</strong> ${f.roles.length ? f.roles.map(r=>`<span class="saved-search-badge">${r}</span>`).join('') : '<em style="color:var(--muted)">Any</em>'}</div>
+      <div><strong style="color:var(--navy)">Industries:</strong> ${f.industries.length ? f.industries.map(i=>`<span class="saved-search-badge">${i}</span>`).join('') : '<em style="color:var(--muted)">Any</em>'}</div>
+      <div><strong style="color:var(--navy)">Company Size:</strong> ${f.sizes.length ? f.sizes.join(', ') : '<em style="color:var(--muted)">Any</em>'}</div>
+      <div><strong style="color:var(--navy)">Geography:</strong> ${f.geos.length <= 3 ? f.geos.join(', ') : f.geos.slice(0,3).join(', ')+' +'+( f.geos.length-3)+' more'}</div>
+      <div><strong style="color:var(--navy)">Solution:</strong> ${f.solution}</div>
+      <div><strong style="color:var(--navy)">Style:</strong> ${f.style}</div>
+      <div><strong style="color:var(--navy)">Mode:</strong> ${f.mode === 'claude' ? '🤖 Claude' : '👤 Manual'}</div>
+    </div>`;
+
+  document.getElementById('saveSearchModal').classList.add('open');
+  setTimeout(() => document.getElementById('saveSearchName').focus(), 100);
+}
+
+function closeSaveSearchModal() {
+  document.getElementById('saveSearchModal').classList.remove('open');
+}
+
+function confirmSaveSearch() {
+  const name = document.getElementById('saveSearchName').value.trim();
+  if (!name) { showToast('⚠ Please enter a name for this search', false); return; }
+
+  const filters  = captureCurrrentFilters();
+  const matchCnt = ALL_EXECUTIVES.filter(e => {
+    const titleLow = e.title.toLowerCase();
+    const rMatch = filters.roles.length === 0 || filters.roles.some(r => titleMatchesRole(titleLow, r));
+    const iMatch = filters.industries.length === 0 || filters.industries.some(ind => e.industry.toLowerCase().includes(ind.toLowerCase()));
+    const sMatch = filters.sizes.length === 0 || filters.sizes.includes(e.size);
+    const gMatch = filters.geos.length === 0 || filters.geos.includes(e.geo);
+    return rMatch && iMatch && sMatch && gMatch;
+  }).length;
+
+  const search = {
+    id       : Date.now(),
+    name,
+    filters,
+    matchCount : matchCnt,
+    created  : getTodayKey(),
+    lastRun  : null,
+    runCount : 0,
+  };
+
+  savedSearches.push(search);
+  localStorage.setItem('cbc_saved_searches', JSON.stringify(savedSearches));
+  renderSavedSearches();
+  closeSaveSearchModal();
+  showToast(`✅ Search "${name}" saved — ${matchCnt} executives match`, true);
+}
+
+function runSavedSearch(id) {
+  const s = savedSearches.find(x=>x.id===id);
+  if (!s) return;
+
+  // Apply all filters
+  roleTags     = [...s.filters.roles];
+  industryTags = [...s.filters.industries];
+  renderRoleTags();
+  renderIndustryTags();
+
+  document.querySelectorAll('.size-filter').forEach(c => {
+    c.checked = s.filters.sizes.includes(c.value);
+  });
+  document.querySelectorAll('.geo-filter').forEach(c => {
+    c.checked = s.filters.geos.includes(c.value);
+  });
+
+  const solEl = document.getElementById('solutionSelect');
+  if (solEl) solEl.value = s.filters.solution;
+
+  const styEl = document.getElementById('styleSelect');
+  if (styEl) styEl.value = s.filters.style;
+
+  if (s.filters.mode) setMode(s.filters.mode);
+
+  // Track usage
+  s.lastRun  = getTodayKey();
+  s.runCount = (s.runCount || 0) + 1;
+  localStorage.setItem('cbc_saved_searches', JSON.stringify(savedSearches));
+  renderSavedSearches();
+
+  applyFilters();
+  // Scroll to top of main content
+  document.querySelector('.content-area').scrollTop = 0;
+  showToast(`▶ Running search "${s.name}" — ${s.matchCount} executives`, true);
+}
+
+function deleteSavedSearch(id) {
+  const s = savedSearches.find(x=>x.id===id);
+  savedSearches = savedSearches.filter(x=>x.id!==id);
+  localStorage.setItem('cbc_saved_searches', JSON.stringify(savedSearches));
+  renderSavedSearches();
+  if (s) showToast(`🗑 "${s.name}" deleted`, false);
+}
+
+function renderSavedSearches() {
+  const el = document.getElementById('savedSearchList');
+  const countEl = document.getElementById('savedSearchCount');
+  if (!el) return;
+
+  countEl.textContent = savedSearches.length + ' saved';
+
+  if (!savedSearches.length) {
+    el.innerHTML = '<div class="search-empty">No saved searches yet.<br/>Set filters above and click "Save Current Search".</div>';
+    return;
+  }
+
+  el.innerHTML = savedSearches.map(s => `
+    <div class="saved-search-item" id="ss-${s.id}">
+      <div style="flex:1">
+        <div class="saved-search-name">🔖 ${escHtml(s.name)}</div>
+        <div class="saved-search-meta">
+          ${s.filters.roles.slice(0,3).map(r=>`<span class="saved-search-badge">${escHtml(r)}</span>`).join('')}${s.filters.roles.length>3?`<span class="saved-search-badge">+${s.filters.roles.length-3}</span>`:''}
+          ${s.filters.industries.slice(0,2).map(i=>`<span class="saved-search-badge" style="background:#dcfce7;color:#15803d">${escHtml(i)}</span>`).join('')}
+        </div>
+        <div class="saved-search-meta" style="margin-top:3px">
+          <span style="color:var(--blue);font-weight:bold">${s.matchCount} matches</span>
+          &nbsp;·&nbsp; ${escHtml(s.filters.solution)}
+          &nbsp;·&nbsp; ${s.lastRun ? 'Last run: '+s.lastRun : 'Never run'}
+          ${s.runCount ? `&nbsp;·&nbsp; ${s.runCount}× used` : ''}
+        </div>
+        <div class="saved-search-actions">
+          <button class="run-search-btn" onclick="runSavedSearch(${s.id})">▶ Run Search</button>
+          <button class="del-search-btn" onclick="deleteSavedSearch(${s.id})" title="Delete">🗑</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+loadSenderDetails();            // restore per-user sender name/title/cta from localStorage
+setMode(currentMode);           // apply saved mode (toggles banners, buttons, labels)
+switchProvider(aiProvider);     // apply saved AI provider tabs
+renderRoleTags();
+renderIndustryTags();
+renderSavedSearches();          // populate saved searches panel
+updateLimitsBar();
+applyFilters();
+renderQueue();
+</script>
+</body>
+</html>
