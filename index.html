@@ -2190,6 +2190,13 @@ function setApolloStatusDot(on) {
   if (dot) dot.classList.toggle('connected', on);
 }
 
+// Apollo requests must go through a CORS proxy because browsers block
+// direct calls to api.apollo.io from web pages.
+const CORS_PROXY = 'https://corsproxy.io/?url=';
+function apolloUrl(path) {
+  return CORS_PROXY + encodeURIComponent('https://api.apollo.io' + path);
+}
+
 // ── Test the Apollo key ─────────────────────────────────
 async function testApolloKey() {
   const key = (document.getElementById('apolloKeyInput').value || '').trim();
@@ -2197,33 +2204,24 @@ async function testApolloKey() {
   if (!key) { statusEl.className='apollo-api-status fail'; statusEl.textContent='⚠ Paste your API key first'; return; }
   statusEl.className='apollo-api-status'; statusEl.textContent='Testing…';
   try {
-    const res = await fetch('https://api.apollo.io/v1/auth/health', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'X-Api-Key': key }
+    const res = await fetch(apolloUrl('/v1/mixed_people/search'), {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ api_key: key, per_page: 1 })
     });
-    if (res.ok) {
-      statusEl.className='apollo-api-status ok'; statusEl.textContent='✅ Connected — live search enabled';
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && !data.error) {
+      statusEl.className='apollo-api-status ok';
+      statusEl.textContent='✅ Connected — live search enabled';
       setApolloStatusDot(true);
     } else {
-      statusEl.className='apollo-api-status fail'; statusEl.textContent=`❌ Invalid key (${res.status})`;
+      statusEl.className='apollo-api-status fail';
+      statusEl.textContent=`❌ ${data.message || data.error || 'Invalid key ('+res.status+')'}`;
     }
   } catch(e) {
-    // CORS on health check endpoint — try a minimal people search instead
-    try {
-      const r2 = await fetch('https://api.apollo.io/v1/mixed_people/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
-        body: JSON.stringify({ api_key: key, per_page: 1 })
-      });
-      if (r2.ok || r2.status === 200) {
-        statusEl.className='apollo-api-status ok'; statusEl.textContent='✅ Connected — live search enabled';
-        setApolloStatusDot(true);
-      } else {
-        statusEl.className='apollo-api-status fail'; statusEl.textContent=`❌ Invalid key (${r2.status})`;
-      }
-    } catch(e2) {
-      statusEl.className='apollo-api-status fail'; statusEl.textContent='❌ Network error — check CORS or key';
-    }
+    statusEl.className='apollo-api-status fail';
+    statusEl.textContent='❌ Could not reach Apollo — check your internet connection';
+    console.error('Apollo test error:', e);
   }
 }
 
@@ -2292,9 +2290,9 @@ async function fetchFromApollo(key) {
 
   try {
     const payload = buildApolloPayload(key);
-    const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
+    const res = await fetch(apolloUrl('/v1/mixed_people/search'), {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+      headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(payload),
     });
 
