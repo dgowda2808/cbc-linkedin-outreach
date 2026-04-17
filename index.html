@@ -804,6 +804,35 @@
   }
   .apollo-hint a { color: #4f46e5; }
 
+  /* ── SEARCH SOURCE TABS ── */
+  .src-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+  .src-tab {
+    flex: 1; padding: 5px 0; border: 1.5px solid #a5b4fc; border-radius: 5px;
+    background: #fff; color: #4f46e5; font-size: 8pt; font-weight: bold;
+    cursor: pointer; transition: all .15s; text-align: center;
+  }
+  .src-tab.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+  .src-tab:hover:not(.active) { background: #eef2ff; }
+
+  /* ── LINKEDIN PANE ── */
+  .li-search-btns { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .li-btn {
+    width: 100%; padding: 7px 10px; border-radius: 5px; border: none;
+    font-size: 8.5pt; font-weight: bold; cursor: pointer; transition: background .15s;
+    display: flex; align-items: center; gap: 6px; justify-content: center;
+  }
+  .li-btn-std  { background: #0a66c2; color: #fff; }
+  .li-btn-std:hover  { background: #004182; }
+  .li-btn-nav  { background: #f5a623; color: #fff; }
+  .li-btn-nav:hover  { background: #d4891a; }
+  .li-btn-proxy { background: #10b981; color: #fff; margin-top:2px; }
+  .li-btn-proxy:hover { background: #059669; }
+  .proxycurl-row { display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+  .proxycurl-toggle {
+    font-size: 7.5pt; color: #4f46e5; cursor: pointer; text-decoration: underline;
+    margin-bottom: 6px; display: inline-block;
+  }
+
   /* ── LOADING OVERLAY ── */
   .grid-loading {
     display: none; flex-direction: column; align-items: center; justify-content: center;
@@ -1167,33 +1196,79 @@
       </div>
     </div>
 
-    <!-- ── APOLLO LIVE SEARCH ── -->
+    <!-- ── LIVE SEARCH (Apollo + LinkedIn) ── -->
     <div class="apollo-section">
       <div class="apollo-header">
         <span class="apollo-label">
           <span class="apollo-status-dot" id="apolloDot"></span>
-          🔴 Live LinkedIn Search
+          🔴 Live Search
         </span>
         <span style="font-size:7pt;color:#4f46e5;font-style:italic" id="apolloResultCount"></span>
       </div>
 
-      <!-- Connected state — shown when key is saved -->
-      <div id="apolloConnectedRow" style="display:none;align-items:center;justify-content:space-between;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:6px;padding:7px 10px;margin-bottom:6px">
-        <span style="font-size:8.5pt;color:#15803d;font-weight:bold">✅ Apollo connected — auto-search on filter</span>
-        <button onclick="clearApolloKey()" style="background:none;border:none;font-size:7.5pt;color:#94a3b8;cursor:pointer;text-decoration:underline">Change key</button>
+      <!-- Source selector tabs -->
+      <div class="src-tabs">
+        <button class="src-tab active" id="srcTabApollo"   onclick="setSearchSource('apollo')">⚡ Apollo.io</button>
+        <button class="src-tab"        id="srcTabLinkedIn" onclick="setSearchSource('linkedin')">in LinkedIn</button>
       </div>
 
-      <!-- Key entry — shown only when no key saved -->
-      <div id="apolloKeyRow" class="apollo-key-row">
-        <input class="apollo-key-input" type="password" id="apolloKeyInput"
-          placeholder="Paste Apollo.io API key once…"
-          oninput="onApolloKeyChange()" />
-        <button class="apollo-test-btn" onclick="saveAndTestApolloKey()">Save</button>
+      <!-- ── APOLLO PANE ── -->
+      <div id="apolloPane">
+        <!-- Connected state -->
+        <div id="apolloConnectedRow" style="display:none;align-items:center;justify-content:space-between;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:6px;padding:7px 10px;margin-bottom:6px">
+          <span style="font-size:8.5pt;color:#15803d;font-weight:bold">✅ Apollo connected — auto-search on filter</span>
+          <button onclick="clearApolloKey()" style="background:none;border:none;font-size:7.5pt;color:#94a3b8;cursor:pointer;text-decoration:underline">Change key</button>
+        </div>
+        <!-- Key entry -->
+        <div id="apolloKeyRow" class="apollo-key-row">
+          <input class="apollo-key-input" type="password" id="apolloKeyInput"
+            placeholder="Paste Apollo.io API key once…" oninput="onApolloKeyChange()" />
+          <button class="apollo-test-btn" onclick="saveAndTestApolloKey()">Save</button>
+        </div>
+        <div class="apollo-api-status" id="apolloApiStatus"></div>
+        <div class="apollo-hint" id="apolloHint">
+          Paste your key once — saved permanently in this browser.<br/>
+          <a href="https://app.apollo.io/#/settings/integrations/api" target="_blank">Get API key from Apollo.io →</a>
+        </div>
       </div>
-      <div class="apollo-api-status" id="apolloApiStatus"></div>
-      <div class="apollo-hint" id="apolloHint">
-        Paste your key once — saved permanently in this browser.<br/>
-        <a href="https://app.apollo.io/#/settings/integrations/api" target="_blank">Get API key from Apollo.io →</a>
+
+      <!-- ── LINKEDIN PANE ── -->
+      <div id="linkedinPane" style="display:none">
+        <div class="li-search-btns">
+          <button class="li-btn li-btn-std" onclick="openLinkedInSearch(false)">
+            🔍 Search LinkedIn People
+          </button>
+          <button class="li-btn li-btn-nav" onclick="openLinkedInSearch(true)">
+            💼 Sales Navigator Search
+          </button>
+        </div>
+        <div style="font-size:7.5pt;color:var(--muted);margin-bottom:10px;line-height:1.5">
+          Opens LinkedIn in a new tab with your current filters pre-applied.<br/>
+          Make sure you're logged into LinkedIn first.
+        </div>
+
+        <!-- Proxycurl — programmatic results in dashboard -->
+        <span class="proxycurl-toggle" onclick="toggleProxycurlSetup()">
+          + Get results directly in dashboard (Proxycurl API)
+        </span>
+        <div id="proxycurlSetup" style="display:none">
+          <div class="proxycurl-row">
+            <input class="apollo-key-input" type="password" id="proxycurlKey"
+              placeholder="Proxycurl API key…" />
+            <button class="apollo-test-btn" style="background:#10b981" onclick="saveProxycurlKey()">Save</button>
+          </div>
+          <div class="apollo-api-status" id="proxycurlStatus"></div>
+          <div class="apollo-hint">
+            Proxycurl fetches LinkedIn data via API.<br/>
+            <a href="https://nubela.co/proxycurl" target="_blank">Get Proxycurl API key →</a>
+          </div>
+        </div>
+
+        <!-- Connected state for Proxycurl -->
+        <div id="proxycurlConnectedRow" style="display:none;align-items:center;justify-content:space-between;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:6px;padding:7px 10px;margin-top:6px">
+          <span style="font-size:8.5pt;color:#15803d;font-weight:bold">✅ Proxycurl connected — auto-fetch on filter</span>
+          <button onclick="clearProxycurlKey()" style="background:none;border:none;font-size:7.5pt;color:#94a3b8;cursor:pointer;text-decoration:underline">Change key</button>
+        </div>
       </div>
     </div>
 
@@ -2262,6 +2337,145 @@ function mapApolloToExec(person) {
 }
 
 // ── Apollo key persistence ──────────────────────────────
+// ── Search source (Apollo vs LinkedIn) ─────────────────
+let searchSource = localStorage.getItem('cbc_search_source') || 'apollo';
+
+function setSearchSource(src) {
+  searchSource = src;
+  localStorage.setItem('cbc_search_source', src);
+  document.getElementById('srcTabApollo').classList.toggle('active',   src === 'apollo');
+  document.getElementById('srcTabLinkedIn').classList.toggle('active', src === 'linkedin');
+  document.getElementById('apolloPane').style.display    = src === 'apollo'   ? '' : 'none';
+  document.getElementById('linkedinPane').style.display  = src === 'linkedin' ? '' : 'none';
+  // update status dot colour
+  const dot = document.getElementById('apolloDot');
+  if (dot) dot.classList.toggle('connected',
+    src === 'apollo'   ? !!localStorage.getItem('cbc_apollo_key') :
+    src === 'linkedin' ? !!localStorage.getItem('cbc_proxycurl_key') : false);
+}
+
+// ── LinkedIn URL builder ────────────────────────────────
+const LI_GEO_IDS = {
+  'India':         ['102713980'],
+  'North America': ['103644278', '101452733'],   // US + Canada
+  'UK':            ['101165590'],
+  'Europe':        ['101165590', '101282230', '105015875', '102454443'],
+  'Middle East':   ['104305776', '101583706'],   // UAE + Saudi Arabia
+  'APAC':          ['102454443', '90009800'],    // Singapore + Australia
+};
+
+function buildLinkedInUrl(salesNav) {
+  const roles = roleTags;
+  const industries = industryTags;
+  const geos  = [...document.querySelectorAll('.geo-filter:checked')].map(c => c.value);
+  const kw    = [...roles, ...industries.slice(0, 3)].join(' ');
+  const geoUrns = geos.flatMap(g => LI_GEO_IDS[g] || []);
+
+  if (salesNav) {
+    const p = new URLSearchParams();
+    if (kw) p.set('keywords', kw);
+    if (geoUrns.length)
+      p.set('geoRegionUrns', '["urn:li:geo:' + geoUrns.join('","urn:li:geo:') + '"]');
+    return 'https://www.linkedin.com/sales/search/people?' + p.toString();
+  }
+  const p = new URLSearchParams({ resultType: 'PEOPLE' });
+  if (kw) p.set('keywords', kw);
+  if (geoUrns.length) p.set('geoUrn', '["' + geoUrns.join('","') + '"]');
+  return 'https://www.linkedin.com/search/results/people/?' + p.toString();
+}
+
+function openLinkedInSearch(salesNav) {
+  const url = buildLinkedInUrl(salesNav);
+  window.open(url, '_blank');
+  showToast('Opening LinkedIn' + (salesNav ? ' Sales Navigator' : '') + ' with your filters…', true);
+}
+
+function toggleProxycurlSetup() {
+  const el = document.getElementById('proxycurlSetup');
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+// ── Proxycurl key management ────────────────────────────
+function loadProxycurlKey() {
+  if (localStorage.getItem('cbc_proxycurl_key')) setProxycurlUIConnected(true);
+}
+
+function setProxycurlUIConnected(connected) {
+  document.getElementById('proxycurlConnectedRow').style.display = connected ? 'flex' : 'none';
+  document.getElementById('proxycurlSetup').style.display        = connected ? 'none' : 'none'; // keep collapsed
+  if (connected) {
+    document.querySelector('.proxycurl-toggle').style.display = 'none';
+  }
+}
+
+function clearProxycurlKey() {
+  localStorage.removeItem('cbc_proxycurl_key');
+  setProxycurlUIConnected(false);
+  document.querySelector('.proxycurl-toggle').style.display = 'inline-block';
+  showToast('Proxycurl key removed', false);
+}
+
+async function saveProxycurlKey() {
+  const key = (document.getElementById('proxycurlKey').value || '').trim();
+  const st  = document.getElementById('proxycurlStatus');
+  if (!key) { st.className = 'apollo-api-status fail'; st.textContent = '⚠ Paste key first'; return; }
+  st.className = 'apollo-api-status'; st.textContent = 'Verifying…';
+  try {
+    // Test with a simple person lookup to verify key validity
+    const res = await fetch('https://corsproxy.io/?url=' +
+      encodeURIComponent('https://nubela.co/proxycurl/api/v2/linkedin/profile?linkedin_profile_url=https://linkedin.com/in/williamhgates&use_cache=if-present'), {
+      headers: { Authorization: 'Bearer ' + key }
+    });
+    if (res.status === 401 || res.status === 403) throw new Error('Invalid key');
+    localStorage.setItem('cbc_proxycurl_key', key);
+    st.className = 'apollo-api-status ok'; st.textContent = '';
+    setProxycurlUIConnected(true);
+    showToast('✅ Proxycurl connected — key saved permanently', true);
+  } catch(e) {
+    st.className = 'apollo-api-status fail'; st.textContent = '❌ ' + e.message;
+  }
+}
+
+// ── Fetch live results from Proxycurl (LinkedIn data) ───
+async function fetchFromProxycurl(key) {
+  setGridLoading(true, 'Fetching LinkedIn profiles via Proxycurl…');
+  document.getElementById('apolloResultCount').textContent = '';
+  try {
+    const roles  = roleTags;
+    const geos   = [...document.querySelectorAll('.geo-filter:checked')].map(c => c.value);
+    const kw     = roles.join(' ');
+    const country = geos.includes('India') ? 'IN' :
+                    geos.includes('North America') ? 'US' :
+                    geos.includes('UK') ? 'GB' : '';
+    const params = new URLSearchParams({ keyword_regex: kw || 'CTO OR CEO OR CFO', page_size: '25' });
+    if (country) params.set('country', country);
+    const res = await fetch('https://corsproxy.io/?url=' +
+      encodeURIComponent('https://nubela.co/proxycurl/api/v2/search/person?' + params.toString()), {
+      headers: { Authorization: 'Bearer ' + key }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+    const results = data.results || [];
+    results.forEach(p => {
+      const exec = {
+        name: p.full_name || 'Unknown', title: p.occupation || '', company: p.company || '',
+        industry: 'Technology', size: 'Enterprise', geo: detectGeo(p.country),
+        linkedIn: p.linkedin_profile_url || '#', solution: 'ERP Integration', _live: true,
+      };
+      if (exec.name !== 'Unknown') ALL_EXECUTIVES.push(exec);
+    });
+    applyStaticFilters();
+    setGridLoading(false); renderCards();
+    const cnt = filteredData.length;
+    document.getElementById('apolloResultCount').textContent = cnt + ' live';
+    showToast(`🔴 ${cnt} LinkedIn profiles fetched via Proxycurl`, true);
+  } catch(err) {
+    setGridLoading(false); applyStaticFilters(); renderCards();
+    document.getElementById('apolloApiStatus').className = 'apollo-api-status fail';
+    document.getElementById('apolloApiStatus').textContent = '❌ ' + err.message;
+  }
+}
+
 function loadApolloKey() {
   const k = localStorage.getItem('cbc_apollo_key') || '';
   if (k) {
@@ -2499,6 +2713,18 @@ function applyStaticFilters() {
 
 // ── Main entry point — routes to Apollo or static ───────
 async function applyFilters() {
+  if (searchSource === 'linkedin') {
+    const pcKey = (localStorage.getItem('cbc_proxycurl_key') || '').trim();
+    if (pcKey) {
+      await fetchFromProxycurl(pcKey);
+    } else {
+      // No Proxycurl key — just apply static filters and nudge user to use the LinkedIn buttons
+      applyStaticFilters(); renderCards();
+      showToast('Use the LinkedIn buttons above to search, or add a Proxycurl key for in-dashboard results', true);
+    }
+    return;
+  }
+  // Apollo source
   const key = (localStorage.getItem('cbc_apollo_key') || '').trim();
   if (key) {
     await fetchFromApollo(key);
@@ -3772,6 +3998,8 @@ async function signInMicrosoft() {
 setMode(currentMode);           // apply saved mode (toggles banners, buttons, labels)
 switchProvider(aiProvider);     // apply saved AI provider tabs
 loadApolloKey();                // restore Apollo key from localStorage
+loadProxycurlKey();             // restore Proxycurl key from localStorage
+setSearchSource(searchSource);  // restore last-used search source tab
 loadSenderDetails();
 renderRoleTags();
 renderIndustryTags();
