@@ -1167,17 +1167,24 @@
         </span>
         <span style="font-size:7pt;color:#4f46e5;font-style:italic" id="apolloResultCount"></span>
       </div>
-      <div class="apollo-key-row">
+
+      <!-- Connected state — shown when key is saved -->
+      <div id="apolloConnectedRow" style="display:none;align-items:center;justify-content:space-between;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:6px;padding:7px 10px;margin-bottom:6px">
+        <span style="font-size:8.5pt;color:#15803d;font-weight:bold">✅ Apollo connected — auto-search on filter</span>
+        <button onclick="clearApolloKey()" style="background:none;border:none;font-size:7.5pt;color:#94a3b8;cursor:pointer;text-decoration:underline">Change key</button>
+      </div>
+
+      <!-- Key entry — shown only when no key saved -->
+      <div id="apolloKeyRow" class="apollo-key-row">
         <input class="apollo-key-input" type="password" id="apolloKeyInput"
-          placeholder="Apollo.io API key…"
+          placeholder="Paste Apollo.io API key once…"
           oninput="onApolloKeyChange()" />
-        <button class="apollo-test-btn" onclick="testApolloKey()">Test</button>
+        <button class="apollo-test-btn" onclick="saveAndTestApolloKey()">Save</button>
       </div>
       <div class="apollo-api-status" id="apolloApiStatus"></div>
-      <div class="apollo-hint">
-        Powers live people search via Apollo.io — verified LinkedIn profiles.<br/>
-        Free tier: 50 exports/month. &nbsp;
-        <a href="https://app.apollo.io/#/settings/integrations/api" target="_blank">Get your free API key →</a>
+      <div class="apollo-hint" id="apolloHint">
+        Paste your key once — saved permanently in this browser.<br/>
+        <a href="https://app.apollo.io/#/settings/integrations/api" target="_blank">Get API key from Apollo.io →</a>
       </div>
     </div>
 
@@ -2245,19 +2252,56 @@ function mapApolloToExec(person) {
 // ── Apollo key persistence ──────────────────────────────
 function loadApolloKey() {
   const k = localStorage.getItem('cbc_apollo_key') || '';
-  const el = document.getElementById('apolloKeyInput');
-  if (el && k) {
-    el.value = k;
-    setApolloStatusDot(true);
+  if (k) {
+    setApolloUIConnected(true);
   }
 }
 
+function setApolloUIConnected(connected) {
+  document.getElementById('apolloConnectedRow').style.display = connected ? 'flex' : 'none';
+  document.getElementById('apolloKeyRow').style.display      = connected ? 'none' : 'flex';
+  document.getElementById('apolloHint').style.display        = connected ? 'none' : 'block';
+  setApolloStatusDot(connected);
+}
+
 function onApolloKeyChange() {
-  const k = document.getElementById('apolloKeyInput').value.trim();
-  localStorage.setItem('cbc_apollo_key', k);
-  setApolloStatusDot(!!k);
+  // Just clear any old status while typing
   document.getElementById('apolloApiStatus').textContent = '';
   document.getElementById('apolloApiStatus').className = 'apollo-api-status';
+}
+
+function clearApolloKey() {
+  localStorage.removeItem('cbc_apollo_key');
+  document.getElementById('apolloKeyInput').value = '';
+  setApolloUIConnected(false);
+  showToast('Apollo key removed — enter a new key to re-enable live search', false);
+}
+
+async function saveAndTestApolloKey() {
+  const key = (document.getElementById('apolloKeyInput').value || '').trim();
+  const statusEl = document.getElementById('apolloApiStatus');
+  if (!key) { statusEl.className='apollo-api-status fail'; statusEl.textContent='⚠ Paste your API key first'; return; }
+  statusEl.className='apollo-api-status'; statusEl.textContent='Verifying…';
+  try {
+    const res = await fetch(apolloUrl('/v1/people/search'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
+      body: JSON.stringify({ per_page: 1 })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && !data.error) {
+      localStorage.setItem('cbc_apollo_key', key);
+      statusEl.className='apollo-api-status ok'; statusEl.textContent='';
+      setApolloUIConnected(true);
+      showToast('✅ Apollo connected — key saved permanently', true);
+    } else {
+      statusEl.className='apollo-api-status fail';
+      statusEl.textContent=`❌ ${data.message || data.error || 'Invalid key'}`;
+    }
+  } catch(e) {
+    statusEl.className='apollo-api-status fail';
+    statusEl.textContent='❌ Could not reach Apollo — check your connection';
+  }
 }
 
 function setApolloStatusDot(on) {
