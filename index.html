@@ -3951,7 +3951,7 @@ function loadSenderDetails() {
 // ── Microsoft Azure SSO autofill ────────────────────────
 const _msalApp = (typeof msal !== 'undefined') ? new msal.PublicClientApplication({
   auth: {
-    clientId:    localStorage.getItem('cbc_ms_client_id') || 'common',
+    clientId:    '3cc47ae5-f9e1-40ab-8729-c925fc4a4bfb',
     authority:   'https://login.microsoftonline.com/common',
     redirectUri: window.location.href.split('?')[0],
   },
