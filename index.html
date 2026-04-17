@@ -2204,7 +2204,7 @@ async function testApolloKey() {
   if (!key) { statusEl.className='apollo-api-status fail'; statusEl.textContent='⚠ Paste your API key first'; return; }
   statusEl.className='apollo-api-status'; statusEl.textContent='Testing…';
   try {
-    const res = await fetch(apolloUrl('/v1/mixed_people/search'), {
+    const res = await fetch(apolloUrl('/v1/people/search'), {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
       body:    JSON.stringify({ per_page: 1 })
@@ -2287,7 +2287,7 @@ async function fetchFromApollo(key) {
 
   try {
     const payload = buildApolloPayload(key);
-    const res = await fetch(apolloUrl('/v1/mixed_people/search'), {
+    const res = await fetch(apolloUrl('/v1/people/search'), {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
       body:    JSON.stringify(payload),
