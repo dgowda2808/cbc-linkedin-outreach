@@ -765,6 +765,62 @@
   }
   .apply-tpl-btn:hover { background: #5b21b6; }
   .tpl-status { font-size: 7.5pt; color: var(--green); margin-top: 4px; font-weight: bold; min-height: 16px; }
+
+  /* ── APOLLO LIVE SEARCH ── */
+  .apollo-section {
+    padding: 14px 18px; border-bottom: 2px solid #6366f1;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  }
+  .apollo-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+  }
+  .apollo-label {
+    font-size: 8.5pt; font-weight: bold; color: #3730a3;
+    text-transform: uppercase; letter-spacing: .8px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .apollo-status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; flex-shrink: 0; transition: background .3s;
+  }
+  .apollo-status-dot.connected { background: #16a34a; box-shadow: 0 0 5px #16a34a88; }
+  .apollo-key-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .apollo-key-input {
+    flex: 1; padding: 5px 8px; border: 1.5px solid #a5b4fc;
+    border-radius: 4px; font-size: 8.5pt; font-family: monospace;
+    background: #fff; outline: none;
+  }
+  .apollo-key-input:focus { border-color: #6366f1; }
+  .apollo-test-btn {
+    background: #6366f1; color: #fff; border: none;
+    border-radius: 4px; padding: 5px 9px; font-size: 8pt;
+    font-weight: bold; cursor: pointer; white-space: nowrap; transition: background .15s;
+  }
+  .apollo-test-btn:hover { background: #4f46e5; }
+  .apollo-api-status { font-size: 7.5pt; margin-top: 3px; min-height: 14px; }
+  .apollo-api-status.ok   { color: var(--green); font-weight: bold; }
+  .apollo-api-status.fail { color: var(--red); font-weight: bold; }
+  .apollo-hint {
+    font-size: 7.5pt; color: #4f46e5; font-style: italic; margin-top: 4px; line-height: 1.4;
+  }
+  .apollo-hint a { color: #4f46e5; }
+
+  /* ── LOADING OVERLAY ── */
+  .grid-loading {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    padding: 60px 30px; color: #6366f1; text-align: center;
+  }
+  .grid-loading.show { display: flex; }
+  .spinner {
+    width: 36px; height: 36px; border: 4px solid #e0e7ff;
+    border-top-color: #6366f1; border-radius: 50%;
+    animation: spin .8s linear infinite; margin-bottom: 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 10pt; font-weight: bold; color: #3730a3; margin-bottom: 4px; }
+  .loading-sub  { font-size: 8.5pt; color: #6366f1; }
+
+  /* live badge on topbar */
+  .badge.live { background: #6366f1; }
 </style>
 </head>
 <body>
@@ -1037,12 +1093,9 @@
     <!-- Sender -->
     <div class="config-section">
       <label class="section-label">👤 Sender Details</label>
-      <div id="senderSetupHint" style="display:none;background:#fef9c3;border:1px solid #fde68a;border-radius:4px;padding:6px 9px;font-size:8pt;color:#92400e;margin-bottom:7px">
-        👋 First time? Fill in your details — they're saved in your browser automatically.
-      </div>
-      <input class="input-field" id="senderName"  placeholder="Your Name (e.g. Suchithra R.)"          style="margin-bottom:6px" oninput="saveSenderDetails()"/>
-      <input class="input-field" id="senderTitle" placeholder="Your Title (e.g. Business Development)"  style="margin-bottom:6px" oninput="saveSenderDetails()"/>
-      <input class="input-field" id="ctaLink"     placeholder="Calendly / CTA Link (optional)"          oninput="saveSenderDetails()"/>
+      <input class="input-field" id="senderName" placeholder="Your Name" value="Suchithra R." style="margin-bottom:6px"/>
+      <input class="input-field" id="senderTitle" placeholder="Your Title" value="Business Development, CBC" style="margin-bottom:6px"/>
+      <input class="input-field" id="ctaLink" placeholder="Calendly / CTA Link" value="calendly.com/cbcinc"/>
     </div>
 
     <!-- ── AI PROVIDER (Manual Mode only) ── -->
@@ -1102,6 +1155,29 @@
         </select>
         <button class="test-api-btn" style="width:100%" onclick="testProvider('ollama')">Test Connection</button>
         <div class="api-status" id="ollamaStatus"></div>
+      </div>
+    </div>
+
+    <!-- ── APOLLO LIVE SEARCH ── -->
+    <div class="apollo-section">
+      <div class="apollo-header">
+        <span class="apollo-label">
+          <span class="apollo-status-dot" id="apolloDot"></span>
+          🔴 Live LinkedIn Search
+        </span>
+        <span style="font-size:7pt;color:#4f46e5;font-style:italic" id="apolloResultCount"></span>
+      </div>
+      <div class="apollo-key-row">
+        <input class="apollo-key-input" type="password" id="apolloKeyInput"
+          placeholder="Apollo.io API key…"
+          oninput="onApolloKeyChange()" />
+        <button class="apollo-test-btn" onclick="testApolloKey()">Test</button>
+      </div>
+      <div class="apollo-api-status" id="apolloApiStatus"></div>
+      <div class="apollo-hint">
+        Powers live people search via Apollo.io — verified LinkedIn profiles.<br/>
+        Free tier: 50 exports/month. &nbsp;
+        <a href="https://app.apollo.io/#/settings/integrations/api" target="_blank">Get your free API key →</a>
       </div>
     </div>
 
@@ -1179,6 +1255,11 @@
 
     <!-- CARD GRID -->
     <div class="content-area" style="flex:1;overflow-y:auto;">
+      <div class="grid-loading" id="gridLoading">
+        <div class="spinner"></div>
+        <div class="loading-text">Searching LinkedIn via Apollo…</div>
+        <div class="loading-sub" id="loadingSubText">Fetching live profiles matching your filters</div>
+      </div>
       <div class="exec-grid" id="execGrid"></div>
       <div class="empty-state" id="emptyState" style="display:none">
         <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="3"/><text x="18" y="42" font-size="24" fill="currentColor">👤</text></svg>
@@ -1655,41 +1736,6 @@ let currentExec  = null;
 let currentTab   = 'connection';
 
 // ═══════════════════════════════════════════════════════
-//  SENDER DETAILS — optional, persisted per browser
-// ═══════════════════════════════════════════════════════
-function loadSenderDetails() {
-  const saved = JSON.parse(localStorage.getItem('cbc_sender') || '{}');
-  if (saved.name)  document.getElementById('senderName').value  = saved.name;
-  if (saved.title) document.getElementById('senderTitle').value = saved.title;
-  if (saved.cta)   document.getElementById('ctaLink').value     = saved.cta;
-  // Show first-time hint if all fields are empty
-  const anyFilled = saved.name || saved.title || saved.cta;
-  const hint = document.getElementById('senderSetupHint');
-  if (hint) hint.style.display = anyFilled ? 'none' : 'block';
-}
-function saveSenderDetails() {
-  localStorage.setItem('cbc_sender', JSON.stringify({
-    name:  document.getElementById('senderName').value,
-    title: document.getElementById('senderTitle').value,
-    cta:   document.getElementById('ctaLink').value
-  }));
-  const hint = document.getElementById('senderSetupHint');
-  if (hint) hint.style.display = 'none';
-}
-// Helper — returns sender value or empty string (no hardcoded fallback)
-function getSender()      { return document.getElementById('senderName').value.trim(); }
-function getSenderTitle() { return document.getElementById('senderTitle').value.trim(); }
-function getCTA()         { return document.getElementById('ctaLink').value.trim(); }
-// Build sender sign-off — omits gracefully if fields empty
-function senderSignoff() {
-  const n = getSender(), t = getSenderTitle();
-  if (n && t) return `— ${n}, ${t}`;
-  if (n)      return `— ${n}`;
-  if (t)      return `— ${t}`;
-  return '';
-}
-
-// ═══════════════════════════════════════════════════════
 //  MASTER MESSAGE
 // ═══════════════════════════════════════════════════════
 let _masterMsgValue = '';   // JS-side cache — always in sync with the textarea
@@ -1737,9 +1783,9 @@ function clearMasterMsg() {
 
 // Interpolate a message string with exec data + sidebar field values
 function interpolateMasterMsg(template, exec) {
-  const sender      = getSender();
-  const senderTitle = getSenderTitle();
-  const cta         = getCTA();
+  const sender      = document.getElementById('senderName').value      || 'Suchithra';
+  const senderTitle = document.getElementById('senderTitle').value     || 'Business Development, CBC';
+  const cta         = document.getElementById('ctaLink').value         || 'calendly.com/cbcinc';
   const solution    = document.getElementById('solutionSelect').value  || 'IBP';
   const firstName   = exec.name.split(' ')[0].replace(/^Dr\.?/, '').trim();
   return template
@@ -1823,9 +1869,9 @@ function onCustomTplChange() {
 
 // Replace placeholders with actual exec values
 function interpolateCustomTemplate(template, exec) {
-  const sender      = getSender();
-  const senderTitle = getSenderTitle();
-  const cta         = getCTA();
+  const sender      = document.getElementById('senderName').value  || 'Suchithra';
+  const senderTitle = document.getElementById('senderTitle').value || 'Business Development, CBC';
+  const cta         = document.getElementById('ctaLink').value     || 'calendly.com/cbcinc';
   const solution    = document.getElementById('solutionSelect').value || 'IBP';
   const firstName   = exec.name.split(' ')[0].replace(/^Dr\.?/,'').trim();
 
@@ -1881,10 +1927,9 @@ function generateMessage(exec, type) {
     if (tplText) return interpolateCustomTemplate(tplText, exec);
   }
 
-  const sender  = getSender();
-  const title   = getSenderTitle();
-  const cta     = getCTA();
-  const signoff = senderSignoff();
+  const sender  = document.getElementById('senderName').value  || 'Suchithra';
+  const title   = document.getElementById('senderTitle').value || 'CBC';
+  const cta     = document.getElementById('ctaLink').value     || 'calendly.com/cbcinc';
   const sol     = document.getElementById('solutionSelect').value;
   const style   = document.getElementById('styleSelect').value;
 
@@ -1893,39 +1938,39 @@ function generateMessage(exec, type) {
 
   const msgs = {
     connection: {
-      'Professional & Direct':  `Hi ${firstName}, I work with ${co}-scale enterprises on ${sol} at CBC. Our AI-powered platform has helped similar orgs cut planning cycles by 3×. Would love to connect and share insights.${signoff ? ' ' + signoff : ''}`,
-      'Conversational & Warm':  `Hi ${firstName}! Noticed your impressive work at ${co}. At CBC we help healthcare & pharma leaders like you modernise operations with ${sol}. Would be great to connect!${signoff ? ' ' + signoff : ''}`,
-      'Insight-Led':            `Hi ${firstName}, enterprises like ${co} are achieving 40% less manual data entry with CBC's ${sol}. Given your role, I thought this might be relevant. Let's connect!${signoff ? ' ' + signoff : ''}`,
-      'Problem-Led':            `Hi ${firstName}, many ${exec.industry} IT leaders tell us ERP data silos slow planning by weeks. CBC's ${sol} fixes that on Day 1. Worth a quick connect?${signoff ? ' ' + signoff : ''}`,
-      'Short & Punchy':         `Hi ${firstName}, CBC helps ${exec.industry} CIOs cut planning time by 3×. Think ${co} could benefit? Let's connect!${signoff ? ' ' + signoff : ''}`,
+      'Professional & Direct':  `Hi ${firstName}, I work with ${co}-scale enterprises on ${sol} at CBC. Our AI-powered platform has helped similar orgs cut planning cycles by 3×. Would love to connect and share insights. — ${sender}, ${title}`,
+      'Conversational & Warm':  `Hi ${firstName}! Noticed your impressive work at ${co}. At CBC we help healthcare & pharma leaders like you modernise operations with ${sol}. Would be great to connect! — ${sender}`,
+      'Insight-Led':            `Hi ${firstName}, enterprises like ${co} are achieving 40% less manual data entry with CBC's ${sol}. Given your role, I thought this might be relevant. Let's connect! — ${sender}`,
+      'Problem-Led':            `Hi ${firstName}, many ${exec.industry} IT leaders tell us ERP data silos slow planning by weeks. CBC's ${sol} fixes that on Day 1. Worth a quick connect? — ${sender}`,
+      'Short & Punchy':         `Hi ${firstName}, CBC helps ${exec.industry} CIOs cut planning time by 3×. Think ${co} could benefit? Let's connect! — ${sender}`,
     },
     followup1: {
-      'Professional & Direct':  `Hi ${firstName}, hope you're well! Following up on my connection request. At CBC, we've helped healthcare enterprises like ${co} achieve Day 1 ERP integration and 90% document accuracy. Happy to share a quick case study — no sales pitch, just insight. Would a 15-min call next week work?${signoff ? ' ' + signoff : ''}`,
-      'Conversational & Warm':  `Hi ${firstName}, just checking in! I reached out a couple of days ago — I work with organisations like ${co} on making ${sol} actually work end-to-end. Happy to send over a quick 1-pager if useful. No pressure at all!${signoff ? ' ' + signoff : ''}`,
-      'Insight-Led':            `Hi ${firstName}, quick follow-up. We recently published a benchmark showing ${exec.industry} CIOs are losing ~14% of planning capacity to manual data entry. CBC's ${sol} closes that gap in weeks. Would you be open to a brief call?${signoff ? ' ' + signoff : ''}`,
-      'Problem-Led':            `Hi ${firstName}, still thinking about the supply chain visibility challenges common in ${exec.industry}. CBC has helped 50+ enterprises tackle exactly this. Could I share a 2-min overview?${signoff ? ' ' + signoff : ''}`,
-      'Short & Punchy':         `Hi ${firstName}, just a quick follow-up! Is ${sol} on your roadmap at ${co}? Happy to share a 1-pager.${signoff ? ' ' + signoff : ''}`,
+      'Professional & Direct':  `Hi ${firstName}, hope you're well! Following up on my connection request. At CBC, we've helped healthcare enterprises like ${co} achieve Day 1 ERP integration and 90% document accuracy. Happy to share a quick case study — no sales pitch, just insight. Would a 15-min call next week work? — ${sender}`,
+      'Conversational & Warm':  `Hi ${firstName}, just checking in! I reached out a couple of days ago — I work with organisations like ${co} on making ${sol} actually work end-to-end. Happy to send over a quick 1-pager if useful. No pressure at all! — ${sender}`,
+      'Insight-Led':            `Hi ${firstName}, quick follow-up. We recently published a benchmark showing ${exec.industry} CIOs are losing ~14% of planning capacity to manual data entry. CBC's ${sol} closes that gap in weeks. Would you be open to a brief call? — ${sender}`,
+      'Problem-Led':            `Hi ${firstName}, still thinking about the supply chain visibility challenges common in ${exec.industry}. CBC has helped 50+ enterprises tackle exactly this. Could I share a 2-min overview? — ${sender}`,
+      'Short & Punchy':         `Hi ${firstName}, just a quick follow-up! Is ${sol} on your roadmap at ${co}? Happy to share a 1-pager. — ${sender}`,
     },
     followup2: {
-      'Professional & Direct':  `Hi ${firstName}, sharing a recent insight that may be relevant for ${co}: CBC clients in ${exec.industry} are running integrated S&OP cycles 3× faster using our ${sol} platform — without replacing existing ERP systems. Happy to show you how in a brief demo.${signoff ? ' ' + signoff : ''}`,
-      'Conversational & Warm':  `Hi ${firstName}, thought this might be interesting for you — one of our ${exec.industry} clients reduced manual reporting by 40% in their first quarter with CBC. Given what you're likely managing at ${co}, wondered if this resonates?${signoff ? ' ' + signoff : ''}`,
-      'Insight-Led':            `Hi ${firstName}, data point for you: 70% faster RFP creation and 3× planning speed are what CBC clients in ${exec.industry} are reporting. Given ${co}'s scale, the ROI case writes itself. Worth exploring?${signoff ? ' ' + signoff : ''}`,
-      'Problem-Led':            `Hi ${firstName}, one thing that often surprises ${exec.industry} leaders: most ERP systems handle transactions well but not decisions. CBC's ${sol} bridges that gap. Could I show you a 5-min walkthrough?${signoff ? ' ' + signoff : ''}`,
-      'Short & Punchy':         `Hi ${firstName}, CBC clients in ${exec.industry} cut planning time 3×. Quick 15-min call?${signoff ? ' ' + signoff : ''}`,
+      'Professional & Direct':  `Hi ${firstName}, sharing a recent insight that may be relevant for ${co}: CBC clients in ${exec.industry} are running integrated S&OP cycles 3× faster using our ${sol} platform — without replacing existing ERP systems. Happy to show you how in a brief demo. — ${sender}, ${title}`,
+      'Conversational & Warm':  `Hi ${firstName}, thought this might be interesting for you — one of our ${exec.industry} clients reduced manual reporting by 40% in their first quarter with CBC. Given what you're likely managing at ${co}, wondered if this resonates? — ${sender}`,
+      'Insight-Led':            `Hi ${firstName}, data point for you: 70% faster RFP creation and 3× planning speed are what CBC clients in ${exec.industry} are reporting. Given ${co}'s scale, the ROI case writes itself. Worth exploring? — ${sender}`,
+      'Problem-Led':            `Hi ${firstName}, one thing that often surprises ${exec.industry} leaders: most ERP systems handle transactions well but not decisions. CBC's ${sol} bridges that gap. Could I show you a 5-min walkthrough? — ${sender}`,
+      'Short & Punchy':         `Hi ${firstName}, CBC clients in ${exec.industry} cut planning time 3×. Quick 15-min call? — ${sender}`,
     },
     cta: {
-      'Professional & Direct':  `Hi ${firstName}, I've reached out a few times and want to respect your time. If ${sol} is on your agenda at ${co}, I'd love to earn 20 minutes. Book here: ${cta}. If not, no worries — happy to reconnect whenever the timing is right.${signoff ? ' ' + signoff : ''}`,
-      'Conversational & Warm':  `Hi ${firstName}, last nudge from me — promise! If CBC's ${sol} ever becomes relevant for ${co}, I'm here. In the meantime, here's a link to book a quick chat whenever suits you: ${cta}. Thanks for connecting!${signoff ? ' ' + signoff : ''}`,
-      'Insight-Led':            `Hi ${firstName}, final thought: enterprises your size in ${exec.industry} typically see ROI on ${sol} within 90 days. If you'd like to explore, here's a 20-min slot: ${cta}. Otherwise, I'll leave you in peace!${signoff ? ' ' + signoff : ''}`,
-      'Problem-Led':            `Hi ${firstName}, if the planning & data challenges we've discussed ever become a priority, CBC is ready to help. Book a no-pressure walkthrough: ${cta}. Thanks for your time!${signoff ? ' ' + signoff : ''}`,
-      'Short & Punchy':         `Hi ${firstName}, book a 15-min CBC walkthrough: ${cta}. Worth it — promise!${signoff ? ' ' + signoff : ''}`,
+      'Professional & Direct':  `Hi ${firstName}, I've reached out a few times and want to respect your time. If ${sol} is on your agenda at ${co}, I'd love to earn 20 minutes. Book here: ${cta}. If not, no worries — happy to reconnect whenever the timing is right. — ${sender}`,
+      'Conversational & Warm':  `Hi ${firstName}, last nudge from me — promise! If CBC's ${sol} ever becomes relevant for ${co}, I'm here. In the meantime, here's a link to book a quick chat whenever suits you: ${cta}. Thanks for connecting! — ${sender}`,
+      'Insight-Led':            `Hi ${firstName}, final thought: enterprises your size in ${exec.industry} typically see ROI on ${sol} within 90 days. If you'd like to explore, here's a 20-min slot: ${cta}. Otherwise, I'll leave you in peace! — ${sender}`,
+      'Problem-Led':            `Hi ${firstName}, if the planning & data challenges we've discussed ever become a priority, CBC is ready to help. Book a no-pressure walkthrough: ${cta}. Thanks for your time! — ${sender}`,
+      'Short & Punchy':         `Hi ${firstName}, book a 15-min CBC walkthrough: ${cta}. Worth it — promise! — ${sender}`,
     },
     inmail: {
       'Professional & Direct':  `Subject: ${sol} for ${co} — 3× Faster Planning\n\nHi ${firstName},\n\nI'm ${sender} from CBC (cbcinc.ai). We specialise in ${sol} for ${exec.industry} enterprises.\n\nOur clients achieve:\n• 70% faster RFP creation\n• 40% less manual data entry\n• Day 1 ERP integration (SAP / Oracle / Dynamics)\n\nGiven ${co}'s scale, I believe there's a strong fit. Would you have 20 minutes this week for a focused walkthrough?\n\nBook here: ${cta}\n\nBest,\n${sender}\n${title}, CBC`,
       'Conversational & Warm':  `Subject: Quick Question for ${firstName} at ${co}\n\nHi ${firstName},\n\nI hope this finds you well! I'm ${sender} from CBC and we work with ${exec.industry} IT leaders on ${sol}.\n\nI noticed ${co}'s growth trajectory and wanted to reach out — we've helped similar organisations cut planning cycle times by 3× without ripping out existing ERP.\n\nWould you be open to a relaxed 15-min chat? Happy to fit around your schedule: ${cta}\n\nWarm regards,\n${sender}`,
       'Insight-Led':            `Subject: ${exec.industry} Benchmark: 3× Faster Planning Cycles\n\nHi ${firstName},\n\nNew benchmark data might be useful for your team: ${exec.industry} enterprises using CBC's ${sol} are reporting a 70% reduction in RFP creation time and 90% document processing accuracy.\n\nGiven ${co}'s ERP footprint, integration is typically Day 1. Happy to share the full report or run a quick demo: ${cta}\n\nBest,\n${sender}, CBC`,
       'Problem-Led':            `Subject: Solving ERP Data Silos at ${co}\n\nHi ${firstName},\n\nThe biggest complaint we hear from ${exec.industry} CIOs? "Our ERP handles transactions, not decisions."\n\nCBC's ${sol} connects your ERP data to real-time planning and AI-driven insights — with no-code deployment.\n\nI'd love to show you a 5-minute proof of concept tailored to ${co}. Book a slot: ${cta}\n\nBest,\n${sender}`,
-      'Short & Punchy':         `Subject: 20 mins → 3× faster planning at ${co}?\n\nHi ${firstName},\n\nCBC's ${sol} helps ${exec.industry} enterprises like ${co} cut planning cycles 3× — Day 1 ERP integration included.\n\nWorth 20 min? ${cta}\n\n${signoff ? '— ' + signoff : ''}`,
+      'Short & Punchy':         `Subject: 20 mins → 3× faster planning at ${co}?\n\nHi ${firstName},\n\nCBC's ${sol} helps ${exec.industry} enterprises like ${co} cut planning cycles 3× — Day 1 ERP integration included.\n\nWorth 20 min? ${cta}\n\n— ${sender}`,
     },
   };
 
@@ -2023,7 +2068,303 @@ function titleMatchesRole(titleLower, roleTag) {
 // ═══════════════════════════════════════════════════════
 //  FILTERING & RENDERING
 // ═══════════════════════════════════════════════════════
-function applyFilters() {
+// ═══════════════════════════════════════════════════════
+//  APOLLO.IO LIVE SEARCH
+// ═══════════════════════════════════════════════════════
+
+// Geography filter values → Apollo location strings
+const GEO_TO_LOCATIONS = {
+  'North America': ['United States', 'Canada'],
+  'United Kingdom': ['United Kingdom', 'England', 'Scotland', 'Wales'],
+  'Europe': ['France', 'Germany', 'Netherlands', 'Spain', 'Italy', 'Sweden',
+             'Switzerland', 'Belgium', 'Poland', 'Denmark', 'Norway', 'Austria',
+             'Ireland', 'Portugal', 'Finland', 'Czech Republic', 'Romania'],
+  'Asia Pacific': ['Australia', 'Japan', 'Singapore', 'Malaysia', 'South Korea',
+                   'New Zealand', 'Thailand', 'Philippines', 'Indonesia', 'Vietnam',
+                   'China', 'Taiwan', 'Hong Kong'],
+  'Middle East': ['United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Kuwait',
+                  'Bahrain', 'Oman', 'Israel', 'Egypt', 'Jordan'],
+  'India': ['India'],
+  'Latin America': ['Brazil', 'Argentina', 'Colombia', 'Chile', 'Peru', 'Mexico'],
+};
+
+// Company size filter values → Apollo employee range strings
+const SIZE_TO_RANGES = {
+  'SME':            ['10,20','21,50','51,100','101,200'],
+  'Mid-Market':     ['201,500','501,1000'],
+  'Enterprise':     ['1001,2000','2001,5000'],
+  'Large Enterprise':['5001,10000','10001'],
+};
+
+// Apollo industry string fragments → our industry tags
+const INDUSTRY_MAP = [
+  { keywords: ['hospital','health','medical','clinic','pharma','biotech','life science','pharmaceutical'], tag: 'Healthcare' },
+  { keywords: ['pharma','pharmaceutical','drug','biotech'], tag: 'Pharma' },
+  { keywords: ['manufactur','industrial','factory','production','automo'], tag: 'Manufacturing' },
+  { keywords: ['logistics','supply chain','transport','freight','shipping','warehouse'], tag: 'Logistics' },
+  { keywords: ['software','technology','tech','saas','cloud','it services','information technology'], tag: 'Technology' },
+  { keywords: ['retail','consumer','e-commerce','ecommerce','wholesale'], tag: 'Retail' },
+  { keywords: ['energy','oil','gas','utility','utilities','mining','power'], tag: 'Energy' },
+  { keywords: ['aerospace','aviation','defense','defence'], tag: 'Aerospace' },
+  { keywords: ['financial','banking','insurance','fintech','investment','asset management'], tag: 'Financial Services' },
+  { keywords: ['biotech','biotechnology','genomic','life science'], tag: 'Biotech' },
+];
+
+// Detect our geo category from a country name
+function detectGeo(country) {
+  if (!country) return 'Other';
+  const c = country.toLowerCase();
+  for (const [geo, countries] of Object.entries(GEO_TO_LOCATIONS)) {
+    if (countries.some(loc => c.includes(loc.toLowerCase()))) return geo;
+  }
+  return 'Other';
+}
+
+// Detect our size category from Apollo employee count
+function detectSize(empCount) {
+  if (!empCount) return 'Enterprise';
+  const n = parseInt(empCount, 10);
+  if (n <= 200)  return 'SME';
+  if (n <= 1000) return 'Mid-Market';
+  if (n <= 5000) return 'Enterprise';
+  return 'Large Enterprise';
+}
+
+// Map Apollo industry string to our tag
+function detectIndustry(apolloIndustry) {
+  if (!apolloIndustry) return 'Technology';
+  const low = apolloIndustry.toLowerCase();
+  for (const { keywords, tag } of INDUSTRY_MAP) {
+    if (keywords.some(k => low.includes(k))) return tag;
+  }
+  return apolloIndustry; // return as-is if no match
+}
+
+// Normalise Apollo linkedin_url to a full https:// URL
+function normLinkedIn(url) {
+  if (!url) return '#';
+  if (url.startsWith('http')) return url;
+  return 'https://www.' + url;
+}
+
+// Map a single Apollo person object to our exec format
+let _apolloIdCounter = 10000;
+function mapApolloToExec(person) {
+  const org  = person.organization || {};
+  const name = [person.first_name, person.last_name].filter(Boolean).join(' ') || 'Unknown';
+  const loc  = [person.city, person.state, person.country].filter(Boolean).join(', ');
+  return {
+    id:       ++_apolloIdCounter,
+    name,
+    title:    person.title    || '',
+    company:  org.name        || person.employer_name || '',
+    location: loc,
+    industry: detectIndustry(org.industry || ''),
+    size:     detectSize(org.estimated_num_employees),
+    geo:      detectGeo(person.country),
+    linkedIn: normLinkedIn(person.linkedin_url),
+    _live: true,   // flag so we know this is a live result
+  };
+}
+
+// ── Apollo key persistence ──────────────────────────────
+function loadApolloKey() {
+  const k = localStorage.getItem('cbc_apollo_key') || '';
+  const el = document.getElementById('apolloKeyInput');
+  if (el && k) {
+    el.value = k;
+    setApolloStatusDot(true);
+  }
+}
+
+function onApolloKeyChange() {
+  const k = document.getElementById('apolloKeyInput').value.trim();
+  localStorage.setItem('cbc_apollo_key', k);
+  setApolloStatusDot(!!k);
+  document.getElementById('apolloApiStatus').textContent = '';
+  document.getElementById('apolloApiStatus').className = 'apollo-api-status';
+}
+
+function setApolloStatusDot(on) {
+  const dot = document.getElementById('apolloDot');
+  if (dot) dot.classList.toggle('connected', on);
+}
+
+// ── Test the Apollo key ─────────────────────────────────
+async function testApolloKey() {
+  const key = (document.getElementById('apolloKeyInput').value || '').trim();
+  const statusEl = document.getElementById('apolloApiStatus');
+  if (!key) { statusEl.className='apollo-api-status fail'; statusEl.textContent='⚠ Paste your API key first'; return; }
+  statusEl.className='apollo-api-status'; statusEl.textContent='Testing…';
+  try {
+    const res = await fetch('https://api.apollo.io/v1/auth/health', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'X-Api-Key': key }
+    });
+    if (res.ok) {
+      statusEl.className='apollo-api-status ok'; statusEl.textContent='✅ Connected — live search enabled';
+      setApolloStatusDot(true);
+    } else {
+      statusEl.className='apollo-api-status fail'; statusEl.textContent=`❌ Invalid key (${res.status})`;
+    }
+  } catch(e) {
+    // CORS on health check endpoint — try a minimal people search instead
+    try {
+      const r2 = await fetch('https://api.apollo.io/v1/mixed_people/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+        body: JSON.stringify({ api_key: key, per_page: 1 })
+      });
+      if (r2.ok || r2.status === 200) {
+        statusEl.className='apollo-api-status ok'; statusEl.textContent='✅ Connected — live search enabled';
+        setApolloStatusDot(true);
+      } else {
+        statusEl.className='apollo-api-status fail'; statusEl.textContent=`❌ Invalid key (${r2.status})`;
+      }
+    } catch(e2) {
+      statusEl.className='apollo-api-status fail'; statusEl.textContent='❌ Network error — check CORS or key';
+    }
+  }
+}
+
+// ── Show/hide loading state ─────────────────────────────
+function setGridLoading(on, subText) {
+  const loadEl = document.getElementById('gridLoading');
+  const gridEl = document.getElementById('execGrid');
+  const emptyEl = document.getElementById('emptyState');
+  if (on) {
+    loadEl.classList.add('show');
+    gridEl.innerHTML = '';
+    emptyEl.style.display = 'none';
+    if (subText) document.getElementById('loadingSubText').textContent = subText;
+  } else {
+    loadEl.classList.remove('show');
+  }
+}
+
+// ── Build the Apollo people search request body ──────────
+function buildApolloPayload(key) {
+  const roles      = roleTags;
+  const industries = industryTags;
+  const sizes      = [...document.querySelectorAll('.size-filter:checked')].map(c=>c.value);
+  const geos       = [...document.querySelectorAll('.geo-filter:checked')].map(c=>c.value);
+
+  // Expand role tags to all title synonyms Apollo understands
+  const personTitles = [];
+  roles.forEach(r => {
+    const syns = ROLE_SYNONYMS[r.toUpperCase()] || ROLE_SYNONYMS[r] || null;
+    if (syns) {
+      syns.forEach(s => personTitles.push(s.replace(/^(cio|cto|ceo|cfo|coo|cdo|ciso|cpo)$/i, m => m.toUpperCase())));
+    } else {
+      personTitles.push(r);
+    }
+  });
+
+  // Expand geo filters to country names
+  const personLocations = [];
+  geos.forEach(g => {
+    const locs = GEO_TO_LOCATIONS[g] || [];
+    locs.forEach(l => personLocations.push(l));
+  });
+
+  // Expand size filters to Apollo employee ranges
+  const empRanges = [];
+  sizes.forEach(s => (SIZE_TO_RANGES[s] || []).forEach(r => empRanges.push(r)));
+
+  return {
+    api_key:    key,
+    per_page:   50,
+    page:       1,
+    person_titles:                         personTitles.length  ? personTitles  : undefined,
+    person_locations:                      personLocations.length ? personLocations : undefined,
+    organization_num_employees_ranges:     empRanges.length     ? empRanges     : undefined,
+    q_organization_industry_tag_ids:       undefined,   // using keyword match below
+    person_seniority_tags:                 ['vp', 'director', 'c_suite'],
+    // Industry as keyword search if set
+    q_keywords: industries.length ? industries.join(' OR ') : undefined,
+  };
+}
+
+// ── Fetch live results from Apollo ──────────────────────
+async function fetchFromApollo(key) {
+  setGridLoading(true, 'Querying Apollo.io for matching LinkedIn profiles…');
+  document.getElementById('apolloResultCount').textContent = '';
+
+  try {
+    const payload = buildApolloPayload(key);
+    const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+      body:    JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.message || `HTTP ${res.status}`);
+    }
+
+    const data  = await res.json();
+    const people = data.people || data.contacts || [];
+
+    if (people.length === 0) {
+      // No results — fall back to static data with a notice
+      setGridLoading(false);
+      filteredData = [];
+      renderCards();
+      document.getElementById('apolloResultCount').textContent = '0 live results';
+      showToast('No live results — try broadening your filters', false);
+      return;
+    }
+
+    // Merge live results into ALL_EXECUTIVES (de-dupe by LinkedIn URL)
+    const existingUrls = new Set(ALL_EXECUTIVES.map(e => e.linkedIn));
+    people.forEach(p => {
+      const exec = mapApolloToExec(p);
+      if (exec.name !== 'Unknown' && exec.title && !existingUrls.has(exec.linkedIn)) {
+        ALL_EXECUTIVES.push(exec);
+        existingUrls.add(exec.linkedIn);
+      }
+    });
+
+    // Now apply local filters on the combined pool (live + static)
+    applyStaticFilters();
+    // Narrow to show only live results first if any
+    const liveResults = filteredData.filter(e => e._live);
+    if (liveResults.length > 0) filteredData = liveResults;
+
+    setGridLoading(false);
+    renderCards();
+
+    const cnt = filteredData.length;
+    document.getElementById('apolloResultCount').textContent = `${cnt} live`;
+    document.getElementById('totalBadge').textContent = ALL_EXECUTIVES.length + ' Executives';
+
+    // Mark topbar badge
+    const tb = document.getElementById('totalBadge');
+    tb.classList.add('live');
+
+    showToast(`🔴 ${cnt} live LinkedIn profile${cnt!==1?'s':''} fetched from Apollo`, true);
+
+    // Update API status indicator
+    const statusEl = document.getElementById('apolloApiStatus');
+    statusEl.className = 'apollo-api-status ok';
+    statusEl.textContent = `✅ ${cnt} results — ${data.pagination?.total_entries || '?'} total matches`;
+
+  } catch(err) {
+    setGridLoading(false);
+    console.error('Apollo fetch error:', err);
+    // Fall back gracefully to static data
+    applyStaticFilters();
+    renderCards();
+    const statusEl = document.getElementById('apolloApiStatus');
+    statusEl.className = 'apollo-api-status fail';
+    statusEl.textContent = `❌ ${err.message} — showing cached data`;
+    showToast(`Apollo error: ${err.message} — using cached data`, false);
+  }
+}
+
+// ── Original filter logic (static data only) ────────────
+function applyStaticFilters() {
   const roles      = roleTags;
   const industries = industryTags;
   const sizes      = [...document.querySelectorAll('.size-filter:checked')].map(c=>c.value);
@@ -2037,12 +2378,21 @@ function applyFilters() {
     const geoMatch  = geos.length === 0 || geos.includes(e.geo);
     return roleMatch && indMatch && sizeMatch && geoMatch;
   });
+}
 
-  renderCards();
-  const msg = filteredData.length === 0
-    ? `No executives found for current filters — try adjusting roles, industries or size`
-    : `Filters applied — ${filteredData.length} executive(s) found`;
-  showToast(msg, filteredData.length > 0);
+// ── Main entry point — routes to Apollo or static ───────
+async function applyFilters() {
+  const key = (localStorage.getItem('cbc_apollo_key') || '').trim();
+  if (key) {
+    await fetchFromApollo(key);
+  } else {
+    applyStaticFilters();
+    renderCards();
+    const msg = filteredData.length === 0
+      ? 'No executives found — try adjusting filters'
+      : `Filters applied — ${filteredData.length} executive(s) found`;
+    showToast(msg, filteredData.length > 0);
+  }
 }
 
 function resetFilters() {
@@ -2094,7 +2444,7 @@ function renderCards() {
           <div class="card-company">🏢 ${e.company}</div>
           <div class="card-location">📍 ${e.location}</div>
         </div>
-        <input type="checkbox" class="card-checkbox" ${selectedIds.has(e.id)?'checked':''} onclick="event.stopPropagation(); toggleSelect(${e.id}, event)" />
+        <input type="checkbox" class="card-checkbox" ${selectedIds.has(e.id)?'checked':''} onclick="toggleSelect(${e.id}, event)" />
       </div>
       <div class="card-tags">
         <span class="tag industry">${e.industry}</span>
@@ -3238,9 +3588,10 @@ function renderSavedSearches() {
 // ═══════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════
-loadSenderDetails();            // restore per-user sender name/title/cta from localStorage
 setMode(currentMode);           // apply saved mode (toggles banners, buttons, labels)
 switchProvider(aiProvider);     // apply saved AI provider tabs
+loadApolloKey();                // restore Apollo key from localStorage
+loadSenderDetails();
 renderRoleTags();
 renderIndustryTags();
 renderSavedSearches();          // populate saved searches panel
