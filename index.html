@@ -1093,9 +1093,18 @@
     <!-- Sender -->
     <div class="config-section">
       <label class="section-label">👤 Sender Details</label>
-      <input class="input-field" id="senderName" placeholder="Your Name" value="Suchithra R." style="margin-bottom:6px"/>
-      <input class="input-field" id="senderTitle" placeholder="Your Title" value="Business Development, CBC" style="margin-bottom:6px"/>
-      <input class="input-field" id="ctaLink" placeholder="Calendly / CTA Link" value="calendly.com/cbcinc"/>
+      <div style="position:relative;margin-bottom:6px">
+        <input class="input-field" id="senderName" placeholder="Your Name (auto-filled from Microsoft login)"
+          style="width:100%;padding-right:70px" oninput="saveSenderDetails()"/>
+        <button id="msSignInBtn" onclick="signInMicrosoft()"
+          style="position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:7.5pt;padding:3px 7px;background:#0078d4;color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">
+          Sign in
+        </button>
+      </div>
+      <input class="input-field" id="senderTitle" placeholder="Your Title / Designation (optional)"
+        style="margin-bottom:6px" oninput="saveSenderDetails()"/>
+      <input class="input-field" id="ctaLink" placeholder="Calendly / CTA Link (optional)"
+        oninput="saveSenderDetails()"/>
     </div>
 
     <!-- ── AI PROVIDER (Manual Mode only) ── -->
@@ -1696,6 +1705,9 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- Microsoft MSAL for Azure SSO autofill -->
+<script src="https://alcdn.msauth.net/browser/2.39.0/js/msal-browser.min.js"></script>
+
 <script>
 // ═══════════════════════════════════════════════════════
 //  DATA — Real verified LinkedIn profiles
@@ -2277,31 +2289,55 @@ function clearApolloKey() {
   showToast('Apollo key removed — enter a new key to re-enable live search', false);
 }
 
+// Try multiple Apollo endpoints in order — different plans expose different ones
+const APOLLO_SEARCH_ENDPOINTS = [
+  '/v1/mixed_people/search',
+  '/v1/people/search',
+  '/v1/contacts/search',
+];
+
+async function apolloPost(endpoint, key, body) {
+  const res = await fetch(apolloUrl(endpoint), {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
+    body:    JSON.stringify({ ...body, api_key: key }),   // key in body too for older API versions
+  });
+  const data = await res.json().catch(()=>({}));
+  return { res, data };
+}
+
 async function saveAndTestApolloKey() {
   const key = (document.getElementById('apolloKeyInput').value || '').trim();
   const statusEl = document.getElementById('apolloApiStatus');
   if (!key) { statusEl.className='apollo-api-status fail'; statusEl.textContent='⚠ Paste your API key first'; return; }
   statusEl.className='apollo-api-status'; statusEl.textContent='Verifying…';
-  try {
-    const res = await fetch(apolloUrl('/v1/people/search'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
-      body: JSON.stringify({ per_page: 1 })
-    });
-    const data = await res.json().catch(()=>({}));
-    if (res.ok && !data.error) {
-      localStorage.setItem('cbc_apollo_key', key);
-      statusEl.className='apollo-api-status ok'; statusEl.textContent='';
-      setApolloUIConnected(true);
-      showToast('✅ Apollo connected — key saved permanently', true);
-    } else {
+
+  for (const endpoint of APOLLO_SEARCH_ENDPOINTS) {
+    try {
+      statusEl.textContent = `Trying ${endpoint}…`;
+      const { res, data } = await apolloPost(endpoint, key, { per_page: 1 });
+      if (res.ok && !data.error && !data.message?.toLowerCase().includes('not accessible')) {
+        localStorage.setItem('cbc_apollo_key', key);
+        localStorage.setItem('cbc_apollo_endpoint', endpoint);
+        statusEl.className='apollo-api-status ok'; statusEl.textContent='';
+        setApolloUIConnected(true);
+        showToast(`✅ Apollo connected via ${endpoint} — key saved permanently`, true);
+        return;
+      }
+      // If error says "not accessible", try next endpoint
+      if (data.message?.toLowerCase().includes('not accessible')) continue;
+      // Any other error (wrong key etc) — stop immediately
       statusEl.className='apollo-api-status fail';
-      statusEl.textContent=`❌ ${data.message || data.error || 'Invalid key'}`;
-    }
-  } catch(e) {
-    statusEl.className='apollo-api-status fail';
-    statusEl.textContent='❌ Could not reach Apollo — check your connection';
+      statusEl.textContent = `❌ ${data.message || data.error || 'Invalid key'}`;
+      return;
+    } catch(e) { /* network error — try next */ }
   }
+
+  // All endpoints failed
+  statusEl.className='apollo-api-status fail';
+  statusEl.innerHTML = `❌ No search endpoint accessible with this key.<br>
+    In Apollo → <b>Settings → Integrations → API</b>, create a key with <b>Search</b> permission (not read-only).
+    <a href="https://app.apollo.io/#/settings/integrations/api" target="_blank" style="color:#4f46e5">Open Apollo API Settings →</a>`;
 }
 
 function setApolloStatusDot(on) {
@@ -2314,34 +2350,6 @@ function setApolloStatusDot(on) {
 const CORS_PROXY = 'https://corsproxy.io/?url=';
 function apolloUrl(path) {
   return CORS_PROXY + encodeURIComponent('https://api.apollo.io' + path);
-}
-
-// ── Test the Apollo key ─────────────────────────────────
-async function testApolloKey() {
-  const key = (document.getElementById('apolloKeyInput').value || '').trim();
-  const statusEl = document.getElementById('apolloApiStatus');
-  if (!key) { statusEl.className='apollo-api-status fail'; statusEl.textContent='⚠ Paste your API key first'; return; }
-  statusEl.className='apollo-api-status'; statusEl.textContent='Testing…';
-  try {
-    const res = await fetch(apolloUrl('/v1/people/search'), {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
-      body:    JSON.stringify({ per_page: 1 })
-    });
-    const data = await res.json().catch(()=>({}));
-    if (res.ok && !data.error) {
-      statusEl.className='apollo-api-status ok';
-      statusEl.textContent='✅ Connected — live search enabled';
-      setApolloStatusDot(true);
-    } else {
-      statusEl.className='apollo-api-status fail';
-      statusEl.textContent=`❌ ${data.message || data.error || 'Invalid key ('+res.status+')'}`;
-    }
-  } catch(e) {
-    statusEl.className='apollo-api-status fail';
-    statusEl.textContent='❌ Could not reach Apollo — check your internet connection';
-    console.error('Apollo test error:', e);
-  }
 }
 
 // ── Show/hide loading state ─────────────────────────────
@@ -2405,19 +2413,14 @@ async function fetchFromApollo(key) {
   document.getElementById('apolloResultCount').textContent = '';
 
   try {
-    const payload = buildApolloPayload(key);
-    const res = await fetch(apolloUrl('/v1/people/search'), {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
-      body:    JSON.stringify(payload),
-    });
+    const endpoint = localStorage.getItem('cbc_apollo_endpoint') || '/v1/mixed_people/search';
+    const payload  = buildApolloPayload(key);
+    const { res, data: rawData } = await apolloPost(endpoint, key, payload);
 
     if (!res.ok) {
-      const err = await res.json().catch(()=>({}));
-      throw new Error(err.message || `HTTP ${res.status}`);
+      throw new Error(rawData.message || `HTTP ${res.status}`);
     }
-
-    const data  = await res.json();
+    const data   = rawData;
     const people = data.people || data.contacts || [];
 
     if (people.length === 0) {
@@ -3697,6 +3700,70 @@ function renderSavedSearches() {
       </div>
     </div>
   `).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  SENDER DETAILS — save/restore from localStorage
+// ═══════════════════════════════════════════════════════
+function saveSenderDetails() {
+  localStorage.setItem('cbc_sender_name',  document.getElementById('senderName').value);
+  localStorage.setItem('cbc_sender_title', document.getElementById('senderTitle').value);
+  localStorage.setItem('cbc_sender_cta',   document.getElementById('ctaLink').value);
+}
+
+function loadSenderDetails() {
+  const name  = localStorage.getItem('cbc_sender_name');
+  const title = localStorage.getItem('cbc_sender_title');
+  const cta   = localStorage.getItem('cbc_sender_cta');
+  if (name  !== null) document.getElementById('senderName').value  = name;
+  if (title !== null) document.getElementById('senderTitle').value = title;
+  if (cta   !== null) document.getElementById('ctaLink').value     = cta;
+  // Show/hide the MS sign-in button
+  document.getElementById('msSignInBtn').style.display = name ? 'none' : 'block';
+}
+
+// ── Microsoft Azure SSO autofill ────────────────────────
+const _msalApp = (typeof msal !== 'undefined') ? new msal.PublicClientApplication({
+  auth: {
+    clientId:    localStorage.getItem('cbc_ms_client_id') || 'common',
+    authority:   'https://login.microsoftonline.com/common',
+    redirectUri: window.location.href.split('?')[0],
+  },
+  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false },
+}) : null;
+
+async function signInMicrosoft() {
+  if (!_msalApp) { showToast('Microsoft login not available', false); return; }
+  try {
+    // Try silent first (user already signed in to Microsoft in this browser)
+    let resp;
+    const accounts = _msalApp.getAllAccounts();
+    if (accounts.length > 0) {
+      resp = await _msalApp.acquireTokenSilent({
+        scopes: ['User.Read'], account: accounts[0]
+      }).catch(() => null);
+    }
+    if (!resp) {
+      resp = await _msalApp.loginPopup({ scopes: ['User.Read'] });
+    }
+    // Fetch display name from Microsoft Graph
+    const graphResp = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: { Authorization: `Bearer ${resp.accessToken}` }
+    });
+    const me = await graphResp.json();
+    const fullName = me.displayName || me.givenName || '';
+    const jobTitle = me.jobTitle   || '';
+    if (fullName) {
+      document.getElementById('senderName').value  = fullName;
+      if (jobTitle && !document.getElementById('senderTitle').value)
+        document.getElementById('senderTitle').value = jobTitle + ', CBC';
+      saveSenderDetails();
+      document.getElementById('msSignInBtn').style.display = 'none';
+      showToast(`✅ Name auto-filled from Microsoft account`, true);
+    }
+  } catch(e) {
+    showToast('Microsoft sign-in failed — enter your name manually', false);
+  }
 }
 
 // ═══════════════════════════════════════════════════════
