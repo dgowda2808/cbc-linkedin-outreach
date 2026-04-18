@@ -1234,17 +1234,26 @@
 
       <!-- ── LINKEDIN PANE ── -->
       <div id="linkedinPane" style="display:none">
+        <!-- Claude AI search — primary action -->
+        <button class="li-btn" id="claudeSearchBtn" onclick="searchViaClaude()"
+          style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;margin-bottom:8px;font-size:9pt;padding:9px 10px">
+          ✦ Search with Claude AI
+        </button>
+        <div style="font-size:7.5pt;color:#6366f1;margin-bottom:10px;line-height:1.5;font-style:italic">
+          Builds a search prompt from your filters, copies it to clipboard,<br/>
+          and opens Claude — just paste (Ctrl+V) and press Enter.
+        </div>
+
         <div class="li-search-btns">
           <button class="li-btn li-btn-std" onclick="openLinkedInSearch(false)">
-            🔍 Search LinkedIn People
+            🔍 Open LinkedIn Search
           </button>
           <button class="li-btn li-btn-nav" onclick="openLinkedInSearch(true)">
-            💼 Sales Navigator Search
+            💼 Sales Navigator
           </button>
         </div>
         <div style="font-size:7.5pt;color:var(--muted);margin-bottom:10px;line-height:1.5">
-          Opens LinkedIn in a new tab with your current filters pre-applied.<br/>
-          Make sure you're logged into LinkedIn first.
+          Opens LinkedIn in a new tab with your current filters pre-applied.
         </div>
 
         <!-- Proxycurl — programmatic results in dashboard -->
@@ -2388,6 +2397,95 @@ function openLinkedInSearch(salesNav) {
   const url = buildLinkedInUrl(salesNav);
   window.open(url, '_blank');
   showToast('Opening LinkedIn' + (salesNav ? ' Sales Navigator' : '') + ' with your filters…', true);
+}
+
+function buildClaudeSearchPrompt() {
+  const roles      = roleTags.length ? roleTags.join(', ') : 'CIO, CTO, IT Director';
+  const industries = industryTags.length ? industryTags.join(', ') : 'any industry';
+  const geos       = [...document.querySelectorAll('.geo-filter:checked')].map(c => c.value);
+  const sizes      = [...document.querySelectorAll('.size-filter:checked')].map(c => c.value);
+  const solution   = document.getElementById('solutionSelect')?.value || 'IBP';
+  const liUrl      = buildLinkedInUrl(false);
+  const navUrl     = buildLinkedInUrl(true);
+
+  return `You are helping with LinkedIn outreach for CBC (cbcinc.ai), an enterprise software company.
+
+**Task:** Search LinkedIn for executives matching the criteria below, extract their details, and return a structured list.
+
+**Search Criteria:**
+- Roles / Titles: ${roles}
+- Industries: ${industries}
+- Geographies: ${geos.length ? geos.join(', ') : 'Global'}
+- Company Size: ${sizes.length ? sizes.join(', ') : 'All sizes'}
+- CBC Solution Focus: ${solution}
+
+**LinkedIn Search URLs (already filtered):**
+- People Search: ${liUrl}
+- Sales Navigator: ${navUrl}
+
+**Instructions:**
+1. Open the LinkedIn People Search URL above in the browser
+2. Scroll through the results and extract details for up to 25 people
+3. For each person collect: Full Name, Job Title, Company Name, Location, LinkedIn Profile URL
+4. Filter to keep only decision-makers (C-suite, VP, Director level) at companies with ${sizes.length ? sizes.join('/') : 'significant'} headcount
+5. Return the results as a clean numbered list in this format:
+   [Name] | [Title] | [Company] | [Location] | [LinkedIn URL]
+
+After listing the results, suggest the top 5 most relevant contacts for CBC's ${solution} solution and briefly explain why.`;
+}
+
+async function searchViaClaude() {
+  const btn = document.getElementById('claudeSearchBtn');
+  btn.textContent = '⏳ Building prompt…';
+  btn.disabled = true;
+
+  const prompt = buildClaudeSearchPrompt();
+
+  try {
+    await navigator.clipboard.writeText(prompt);
+    btn.textContent = '✅ Prompt copied! Opening Claude…';
+    setTimeout(() => {
+      window.open('https://claude.ai/new', '_blank');
+      showToast('✅ Prompt copied — paste it in Claude (Ctrl+V) and press Enter', true);
+      btn.textContent = '✦ Search with Claude AI';
+      btn.disabled = false;
+    }, 600);
+  } catch(e) {
+    // Clipboard blocked — show the prompt in a modal so user can copy manually
+    btn.textContent = '✦ Search with Claude AI';
+    btn.disabled = false;
+    showClaudePromptModal(prompt);
+  }
+}
+
+function showClaudePromptModal(prompt) {
+  let modal = document.getElementById('claudePromptModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'claudePromptModal';
+    modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center`;
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:10px;padding:24px;max-width:600px;width:90%;max-height:80vh;display:flex;flex-direction:column;gap:12px">
+        <div style="font-weight:bold;font-size:11pt;color:#3730a3">✦ Claude Search Prompt</div>
+        <div style="font-size:8pt;color:#64748b">Copy this prompt and paste it into Claude.ai</div>
+        <textarea id="claudePromptText" readonly style="flex:1;min-height:240px;font-size:8pt;font-family:monospace;border:1.5px solid #e2e8f0;border-radius:6px;padding:10px;resize:none;line-height:1.5"></textarea>
+        <div style="display:flex;gap:8px">
+          <button onclick="copyClaudePrompt()" style="flex:1;padding:8px;background:#6366f1;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer">📋 Copy Prompt</button>
+          <button onclick="window.open('https://claude.ai/new','_blank')" style="flex:1;padding:8px;background:#8b5cf6;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer">Open Claude.ai →</button>
+          <button onclick="document.getElementById('claudePromptModal').style.display='none'" style="padding:8px 14px;background:#f1f5f9;border:none;border-radius:6px;cursor:pointer">✕</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('claudePromptText').value = prompt;
+  modal.style.display = 'flex';
+}
+
+function copyClaudePrompt() {
+  const ta = document.getElementById('claudePromptText');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).catch(() => document.execCommand('copy'));
+  showToast('Prompt copied — paste into Claude.ai and press Enter', true);
 }
 
 function toggleProxycurlSetup() {
